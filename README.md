@@ -54,12 +54,15 @@ accounts:
 
 Object paths are `<account>:/bucket/key`. As soon as an account has a `default_bucket`,
 every path is relative to it — `acct:` is its root, `acct:/dir/file` is inside it, and
-the first segment is never mistaken for a bucket. Switch it with:
+the first segment is never mistaken for a bucket. A double slash names a bucket
+explicitly, which also works while a default is set:
 
 ```bash
 scc use matrix-uat:/other-bucket   # make other-bucket the default
 scc use matrix-uat:                # clear it, so paths name the bucket again
 scc buckets matrix-uat             # list buckets without touching the default
+scc ls matrix-uat://langfuse/      # reach langfuse even though a default is set
+scc cp matrix-uat:/a.txt matrix-uat://other-bucket/a.txt   # cross-bucket copy
 ```
 
 ```bash

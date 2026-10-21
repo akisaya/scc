@@ -39,7 +39,8 @@ accounts add flags:
 
 object paths are <account>:/bucket/key when no default bucket is set. Once an
 account has one, every path is relative to it: "acct:" is its root and
-"acct:/dir/file" is inside it. Switch with "scc use acct:/bucket".
+"acct:/dir/file" is inside it. Switch with "scc use acct:/bucket", or write
+"acct://bucket/key" to name a bucket explicitly regardless of the default.
 
 account names use letters, digits, '-', '_' and '.' (max 64 characters)
 
@@ -82,22 +83,33 @@ func Run(args []string) error {
 }
 
 // target is an "<account>:/bucket/key" reference. Empty bucket means "account root".
+// A double slash ("acct://bucket/key") names the bucket explicitly, which bypasses
+// the account's default bucket.
 type target struct {
-	acct   string
-	bucket string
-	key    string
-	dir    bool // the path was written with a trailing slash
+	acct     string
+	bucket   string
+	key      string
+	dir      bool // the path was written with a trailing slash
+	explicit bool // written as acct://bucket/...
 }
 
 func parseTarget(s string) (target, error) {
-	acct, path, ok := strings.Cut(s, ":")
+	acct, rest, ok := strings.Cut(s, ":")
 	if !ok || acct == "" {
 		return target{}, fmt.Errorf("expected <account>:/bucket/key, got %q", s)
 	}
-	path = strings.TrimPrefix(path, "/")
-	dir := strings.HasSuffix(path, "/")
-	bucket, key, _ := strings.Cut(path, "/")
-	return target{acct: acct, bucket: bucket, key: key, dir: dir}, nil
+	explicit := strings.HasPrefix(rest, "//")
+	if explicit {
+		rest = strings.TrimPrefix(rest, "//")
+	} else {
+		rest = strings.TrimPrefix(rest, "/")
+	}
+	dir := strings.HasSuffix(rest, "/")
+	bucket, key, _ := strings.Cut(rest, "/")
+	if explicit && bucket == "" {
+		return target{}, fmt.Errorf("expected <account>://bucket/key, got %q", s)
+	}
+	return target{acct: acct, bucket: bucket, key: key, dir: dir, explicit: explicit}, nil
 }
 
 func isS3(s string) bool {
@@ -139,8 +151,9 @@ func withTarget(s string) (*s3x.Client, target, error) {
 // resolveTarget applies the account's default bucket: when one is configured every
 // path is relative to it, so "acct:/cb_test/" is a folder there, never a bucket.
 // Without a default bucket the first segment is the bucket, as written.
+// "acct://bucket/key" always names the bucket, so it works with or without a default.
 func resolveTarget(t target, def string) target {
-	if def == "" {
+	if def == "" || t.explicit {
 		return t
 	}
 	key := t.bucket

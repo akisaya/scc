@@ -49,6 +49,11 @@ check "bucket name is just a folder" "1" "$("$BIN" ls "local:/" | grep -c "DIR.*
 B2=bucket2$RANDOM
 "$BIN" mb "local:/$B2" >/dev/null || fail=$((fail+1))
 check "mb still names a bucket" "1" "$("$BIN" buckets local | grep -c "^$B2$")"
+# acct://bucket/key reaches another bucket while a default is set
+"$BIN" cp "$T/a.txt" "local://$B2/cross.txt" >/dev/null || fail=$((fail+1))
+check "explicit bucket reachable despite the default" "hello scc" "$("$BIN" cat "local://$B2/cross.txt")"
+check "explicit form leaves the default alone" "hello scc" "$("$BIN" cat "local:/docs/a.txt")"
+"$BIN" rm "local://$B2/cross.txt" >/dev/null
 "$BIN" use "local:/$B2" >/dev/null
 "$BIN" cp "$T/a.txt" "local:/only-here.txt" >/dev/null
 check "paths follow the switched default" "hello scc" "$("$BIN" cat "local:/only-here.txt")"

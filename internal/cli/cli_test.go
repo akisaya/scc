@@ -6,7 +6,7 @@ func TestParseTarget(t *testing.T) {
 	cases := []struct {
 		in                string
 		acct, bucket, key string
-		dir               bool
+		dir, explicit     bool
 		wantErr           bool
 	}{
 		{in: "minio:/bucket/key", acct: "minio", bucket: "bucket", key: "key"},
@@ -16,6 +16,9 @@ func TestParseTarget(t *testing.T) {
 		{in: "minio:/dir/", acct: "minio", bucket: "dir", dir: true},
 		{in: "minio:", acct: "minio"},
 		{in: "minio:/", acct: "minio"},
+		{in: "minio://bucket/key", acct: "minio", bucket: "bucket", key: "key", explicit: true},
+		{in: "minio://bucket/", acct: "minio", bucket: "bucket", dir: true, explicit: true},
+		{in: "minio://", wantErr: true},
 		{in: "/tmp/local-file", wantErr: true},
 		{in: "no-colon", wantErr: true},
 	}
@@ -31,8 +34,10 @@ func TestParseTarget(t *testing.T) {
 			t.Errorf("parseTarget(%q): %v", c.in, err)
 			continue
 		}
-		if got.acct != c.acct || got.bucket != c.bucket || got.key != c.key || got.dir != c.dir {
-			t.Errorf("parseTarget(%q) = %+v, want {%s %s %s dir=%t}", c.in, got, c.acct, c.bucket, c.key, c.dir)
+		if got.acct != c.acct || got.bucket != c.bucket || got.key != c.key ||
+			got.dir != c.dir || got.explicit != c.explicit {
+			t.Errorf("parseTarget(%q) = %+v, want {%s %s %s dir=%t explicit=%t}",
+				c.in, got, c.acct, c.bucket, c.key, c.dir, c.explicit)
 		}
 	}
 }
@@ -81,6 +86,8 @@ func TestResolveTarget(t *testing.T) {
 		{"default swallows nested path", target{bucket: "cb_test", key: "deep/f.txt"}, "data", "data", "cb_test/deep/f.txt"},
 		{"root file keeps no slash", target{bucket: "test_abc"}, "data", "data", "test_abc"},
 		{"another bucket name is just a folder", target{bucket: "langfuse", dir: true}, "data", "data", "langfuse/"},
+		{"explicit form bypasses the default", target{bucket: "langfuse", key: "x/y", explicit: true}, "data", "langfuse", "x/y"},
+		{"explicit form without a default", target{bucket: "b", key: "k", explicit: true}, "", "b", "k"},
 	}
 	for _, c := range cases {
 		got := resolveTarget(c.in, c.def)
