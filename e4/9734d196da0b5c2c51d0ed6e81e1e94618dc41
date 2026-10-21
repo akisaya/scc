@@ -1,0 +1,33 @@
+internal/cli/cli.go
+  s_42f2bbfebdffac::t_f30e5e1dd781c6 33
+.github/workflows/release.yml
+  s_42f2bbfebdffac::t_f9d015a1958e39 1-93
+README.en.md
+  s_42f2bbfebdffac::t_ed3f381f5bbeb1 94,221,236
+CHANGELOG.md
+  s_42f2bbfebdffac::t_5d1d2fb77624c1 19-23
+.github/workflows/ci.yml
+  s_42f2bbfebdffac::t_d0381d088d7315 1-85
+scripts/release-notes.sh
+  s_42f2bbfebdffac::t_e1030a018390e2 1-73
+README.md
+  s_42f2bbfebdffac::t_ed3f381f5bbeb1 94,221,236
+main.go
+  s_42f2bbfebdffac::t_cd3ea8c1006877 11-13,15-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "e49734d196da0b5c2c51d0ed6e81e1e94618dc41",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
