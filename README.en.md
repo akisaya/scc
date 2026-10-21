@@ -233,7 +233,7 @@ SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./t
 
 The end-to-end scripts create their own buckets with a random suffix, check both path forms (an account with a default bucket and one without), and stop early with a clear message when the endpoint is unreachable.
 
-CI runs `gofmt`, `go vet`, `go test -race`, a syntax check of `app.js`, and both end-to-end scripts against a MinIO container. Pushing a tag such as `v0.1.0` builds binaries for macOS, Linux and Windows, attaches them to a GitHub Release, and uses the matching section of `CHANGELOG.md` as the release notes.
+CI runs `gofmt`, `go vet`, `go test -race`, a syntax check of `app.js`, and both end-to-end scripts against an S3 mock (`moto`). Pushing a tag such as `v0.1.0` builds binaries for macOS, Linux and Windows, attaches them to a GitHub Release, and uses the matching section of `CHANGELOG.md` as the release notes.
 
 ## Limitations
 

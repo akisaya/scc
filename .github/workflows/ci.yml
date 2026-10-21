@@ -58,20 +58,27 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      # Exercises real signing, Range requests, prefix deletes and both path
-      # forms against an S3 implementation, which unit tests cannot cover.
-      - name: Start MinIO
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # moto stands in for S3 here on purpose: MinIO's Docker Hub image is no
+      # longer anonymously pullable, and a registry dependency is a flaky way to
+      # test our own code. moto covers listing, Range, prefix deletes and both
+      # path forms; AWS signature math is the SDK's problem, not ours.
+      - name: Install S3 mock
+        run: pip install "moto[server]"
+
+      - name: Start S3 mock
         run: |
-          docker run -d --name minio -p 19000:9000 \
-            -e MINIO_ROOT_USER=testkey \
-            -e MINIO_ROOT_PASSWORD=testsecret123 \
-            minio/minio server /data
-          for _ in $(seq 1 60); do
-            if curl -fsS -o /dev/null http://127.0.0.1:19000/minio/health/live; then exit 0; fi
-            sleep 2
+          nohup moto_server -p 19000 > moto.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:19000/; then exit 0; fi
+            sleep 1
           done
-          echo "MinIO did not become ready" >&2
-          docker logs minio >&2
+          echo "the S3 mock did not start" >&2
+          cat moto.log >&2
           exit 1
 
       - name: CLI end-to-end

@@ -233,7 +233,7 @@ SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./t
 
 端到端脚本会自己创建带随机后缀的桶，同时覆盖两种路径语义（有默认桶的账号和没有的账号），并在 endpoint 不可达时立刻给出明确提示。
 
-CI 会跑 `gofmt`、`go vet`、`go test -race`、`app.js` 语法检查，以及针对 MinIO 容器的两套端到端脚本。推送 `v0.1.0` 这类 tag 会构建 macOS / Linux / Windows 二进制，挂到 GitHub Release 上，并用 `CHANGELOG.md` 里对应的段落作为发布说明。
+CI 会跑 `gofmt`、`go vet`、`go test -race`、`app.js` 语法检查，以及针对 S3 mock（`moto`）的两套端到端脚本。推送 `v0.1.0` 这类 tag 会构建 macOS / Linux / Windows 二进制，挂到 GitHub Release 上，并用 `CHANGELOG.md` 里对应的段落作为发布说明。
 
 ## 限制
 
