@@ -141,7 +141,8 @@ Three forms, no guessing:
 - Directory browsing with breadcrumbs; the current path lives in the URL (`#/account/bucket/prefix`), so refresh and back/forward behave.
 - Upload by button or drag & drop with progress, new folder, download, rename, delete, create/delete buckets.
 - Preview dialog shows path, size and mtime, with `下载` and `新标签打开`.
-- A directory lists at most 1000 entries (one S3 page) and says when there are more.
+- Directories are paginated: 200 entries per page, and `加载更多` keeps appending while showing how many are loaded.
+- The filter box searches only what has been loaded and says how many items matched, so a partial view is never mistaken for a full one.
 - Every `/api/` request is logged with status and duration, which makes a browser-side failure easy to tell apart from a server-side one.
 
 > [!WARNING]
@@ -192,7 +193,7 @@ The UI is a thin client over these endpoints, so anything it does can be scripte
 | `GET` | `/api/b/{acct}/buckets` | List buckets |
 | `POST` | `/api/b/{acct}/buckets` | Create a bucket (`{"name": "..."}`) |
 | `DELETE` | `/api/b/{acct}/buckets/{bucket}` | Delete an empty bucket |
-| `GET` | `/api/b/{acct}/objects/{bucket}?prefix=&recursive=` | List a level or a prefix |
+| `GET` | `/api/b/{acct}/objects/{bucket}?prefix=&cursor=&limit=` | List a level or a prefix, one page at a time (`next_cursor`) |
 | `GET` | `/api/b/{acct}/raw/{bucket}/{key}` | Stream an object (`Range`, `?download=1`) |
 | `PUT` | `/api/b/{acct}/raw/{bucket}/{key}` | Upload |
 | `DELETE` | `/api/b/{acct}/raw/{bucket}/{key}` | Delete (`?recursive=1` for a prefix) |

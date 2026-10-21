@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Directories load one page of 200 entries at a time with a `加载更多` row that
+  shows how many are loaded, instead of stopping at a single 1000-key page. The
+  listing API takes `limit` and `cursor` and returns `next_cursor`.
+- A filter box narrows the loaded entries and reports how many matched, so a
+  partial directory is never mistaken for a complete one.
+
 ## [0.1.0] - 2026-10-21
 
 First stable release: one binary serving both a browser UI and a CLI, with

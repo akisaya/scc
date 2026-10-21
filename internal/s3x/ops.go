@@ -27,7 +27,8 @@ type Object struct {
 type Listing struct {
 	Prefixes  []string
 	Objects   []Object
-	Truncated bool // more keys exist than were returned
+	Truncated bool   // more keys exist than were returned
+	Cursor    string // continuation token for the next page, empty on the last one
 }
 
 func (c *Client) Buckets(ctx context.Context) ([]string, error) {
@@ -51,14 +52,7 @@ func (c *Client) List(ctx context.Context, bucket, prefix string, recursive bool
 	}
 	res := &Listing{}
 	if maxKeys > 0 {
-		in.MaxKeys = aws.Int32(maxKeys)
-		page, err := c.ListObjectsV2(ctx, in)
-		if err != nil {
-			return nil, err
-		}
-		res.add(page, prefix)
-		res.Truncated = aws.ToBool(page.IsTruncated)
-		return res, nil
+		return c.ListPage(ctx, bucket, prefix, recursive, maxKeys, "")
 	}
 	p := s3.NewListObjectsV2Paginator(c.Client, in)
 	for p.HasMorePages() {
@@ -69,6 +63,32 @@ func (c *Client) List(ctx context.Context, bucket, prefix string, recursive bool
 		res.add(page, prefix)
 	}
 	sort.Strings(res.Prefixes)
+	return res, nil
+}
+
+// ListPage returns a single page plus the token needed to fetch the next one.
+// An empty cursor starts at the beginning; an empty result cursor means the end.
+func (c *Client) ListPage(ctx context.Context, bucket, prefix string, recursive bool, maxKeys int32, cursor string) (*Listing, error) {
+	in := &s3.ListObjectsV2Input{Bucket: aws.String(bucket), Prefix: aws.String(prefix)}
+	if !recursive {
+		in.Delimiter = aws.String("/")
+	}
+	if maxKeys > 0 {
+		in.MaxKeys = aws.Int32(maxKeys)
+	}
+	if cursor != "" {
+		in.ContinuationToken = aws.String(cursor)
+	}
+	page, err := c.ListObjectsV2(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	res := &Listing{}
+	res.add(page, prefix)
+	res.Truncated = aws.ToBool(page.IsTruncated)
+	if res.Truncated {
+		res.Cursor = aws.ToString(page.NextContinuationToken)
+	}
 	return res, nil
 }
 

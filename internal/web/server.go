@@ -308,18 +308,26 @@ func handleList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	bucket := r.PathValue("bucket")
-	prefix := r.URL.Query().Get("prefix")
-	recursive := r.URL.Query().Get("recursive") == "1"
-	l, err := c.List(r.Context(), bucket, prefix, recursive, 1000)
+	q := r.URL.Query()
+	prefix := q.Get("prefix")
+	recursive := q.Get("recursive") == "1"
+
+	// One page at a time: the UI asks for the next page by handing back next_cursor.
+	limit := int32(200)
+	if v, err := strconv.Atoi(q.Get("limit")); err == nil && v > 0 && v <= 1000 {
+		limit = int32(v)
+	}
+	l, err := c.ListPage(r.Context(), bucket, prefix, recursive, limit, q.Get("cursor"))
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	writeJSON(w, map[string]any{
-		"prefix":    prefix,
-		"prefixes":  l.Prefixes,
-		"objects":   l.Objects,
-		"truncated": l.Truncated,
+		"prefix":      prefix,
+		"prefixes":    l.Prefixes,
+		"objects":     l.Objects,
+		"truncated":   l.Truncated,
+		"next_cursor": l.Cursor,
 	})
 }
 

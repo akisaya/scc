@@ -1,6 +1,62 @@
 const $ = (s) => document.querySelector(s);
-const state = { acct: null, bucket: null, prefix: "", accounts: [], objectKeys: new Set(), objectByKey: new Map() };
+const PAGE_SIZE = 200;
+const state = {
+  acct: null,
+  bucket: null,
+  prefix: "",
+  accounts: [],
+  objectKeys: new Set(),
+  objectByKey: new Map(),
+  prefixes: [],
+  objects: [],
+  cursor: "",
+  filter: "",
+};
 let loadSeq = 0;
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+const ICON = {
+  folder: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z",
+  file: "M7 3h6l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm6 0v5h4",
+  bucket: "M4 7c0-1.1 3.6-2 8-2s8 .9 8 2-3.6 2-8 2-8-.9-8-2Zm0 0v10c0 1.1 3.6 2 8 2s8-.9 8-2V7",
+};
+
+function icon(path) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", "ico");
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  p.setAttribute("d", path);
+  svg.append(p);
+  return svg;
+}
+
+function applyTheme(theme, persist) {
+  document.documentElement.dataset.theme = theme;
+  if (persist) localStorage.setItem("scc-theme", theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("scc-theme");
+  const pick = () => (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  applyTheme(saved || pick(), false);
+  // keep following the system until the user chooses explicitly
+  matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+    if (!localStorage.getItem("scc-theme")) applyTheme(pick(), false);
+  });
+  $("#theme").onclick = () => {
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true);
+  };
+}
+
+initTheme();
 
 const IMG = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "ico"];
 const VIDEO = ["mp4", "webm", "mov", "m4v", "ogv"];
@@ -155,6 +211,11 @@ function applyHash() {
 }
 
 async function openBucket(acct, bucket, prefix) {
+  if (acct !== state.acct || bucket !== state.bucket || (prefix || "") !== state.prefix) {
+    state.filter = "";
+    const box = $("#filter");
+    if (box) box.value = "";
+  }
   state.acct = acct;
   state.bucket = bucket;
   state.prefix = prefix || "";
@@ -193,16 +254,32 @@ function crumbs() {
 async function load() {
   if (!state.acct || !state.bucket) return;
   crumbs();
+  state.prefixes = [];
+  state.objects = [];
+  state.cursor = "";
+  await fetchPage(false);
+}
+
+// fetchPage appends the next page to what is already on screen; the first page
+// resets the accumulated rows through load().
+async function fetchPage(append) {
   const seq = ++loadSeq;
   const rows = $("#rows");
-  rows.innerHTML = `<tr><td colspan="4" class="loading">加载中…</td></tr>`;
-  $("#empty").hidden = true;
+  if (!append) {
+    rows.innerHTML = `<tr><td colspan="4" class="loading">加载中…</td></tr>`;
+    $("#empty").hidden = true;
+  }
+  const params = new URLSearchParams({ prefix: state.prefix, limit: String(PAGE_SIZE) });
+  if (append && state.cursor) params.set("cursor", state.cursor);
   try {
     const data = await api(
-      `/api/b/${encodeURIComponent(state.acct)}/objects/${encodeURIComponent(state.bucket)}?prefix=${encodeURIComponent(state.prefix)}`
+      `/api/b/${encodeURIComponent(state.acct)}/objects/${encodeURIComponent(state.bucket)}?${params}`
     );
     if (seq !== loadSeq) return; // a newer navigation already took over
-    render(data);
+    state.prefixes = append ? state.prefixes.concat(data.prefixes || []) : data.prefixes || [];
+    state.objects = append ? state.objects.concat(data.objects || []) : data.objects || [];
+    state.cursor = data.next_cursor || "";
+    render();
   } catch (e) {
     if (seq !== loadSeq) return;
     rows.innerHTML = "";
@@ -210,59 +287,32 @@ async function load() {
   }
 }
 
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
+function loadMore() {
+  if (state.cursor) fetchPage(true);
 }
 
-const ICON = {  folder: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z",
-  file: "M7 3h6l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm6 0v5h4",
-  bucket: "M4 7c0-1.1 3.6-2 8-2s8 .9 8 2-3.6 2-8 2-8-.9-8-2Zm0 0v10c0 1.1 3.6 2 8 2s8-.9 8-2V7",
-};
-
-function icon(path) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("aria-hidden", "true");
-  svg.setAttribute("class", "ico");
-  const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  p.setAttribute("d", path);
-  svg.append(p);
-  return svg;
+// matches applies the client-side filter. It only sees what has been loaded so
+// far, which is why the count is shown next to the box.
+function matches(text) {
+  if (!state.filter) return true;
+  return text.toLowerCase().includes(state.filter);
 }
 
-function applyTheme(theme, persist) {
-  document.documentElement.dataset.theme = theme;
-  if (persist) localStorage.setItem("scc-theme", theme);
-}
-
-function initTheme() {
-  const saved = localStorage.getItem("scc-theme");
-  const pick = () => (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-  applyTheme(saved || pick(), false);
-  // keep following the system until the user chooses explicitly
-  matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
-    if (!localStorage.getItem("scc-theme")) applyTheme(pick(), false);
-  });
-  $("#theme").onclick = () => {
-    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true);
-  };
-}
-
-initTheme();
-
-
-function render(data) {
+function render() {
   const rows = $("#rows");
   rows.innerHTML = "";
-  const dirs = data.prefixes || [];
-  const objs = data.objects || [];
-  state.objectKeys = new Set(objs.map((o) => o.Key));
-  state.objectByKey = new Map(objs.map((o) => [o.Key, o]));
-  $("#empty").hidden = dirs.length + objs.length > 0 || data.truncated;
-  $("#empty").textContent = "空目录";
+
+  const dirs = state.prefixes.filter((p) => matches(p.slice(state.prefix.length)));
+  const objs = state.objects.filter((o) => matches(o.Key.slice(state.prefix.length)));
+  state.objectKeys = new Set(state.objects.map((o) => o.Key));
+  state.objectByKey = new Map(state.objects.map((o) => [o.Key, o]));
+
+  const total = state.prefixes.length + state.objects.length;
+  const shown = dirs.length + objs.length;
+  $("#empty").hidden = shown > 0 || state.cursor !== "";
+  $("#empty").textContent = state.filter
+    ? `没有匹配项（只在已加载的 ${total} 项里搜索）`
+    : "空目录";
 
   for (const p of dirs) {
     const name = p.slice(state.prefix.length).replace(/\/$/, "");
@@ -277,6 +327,7 @@ function render(data) {
     tr.append(td, el("td", "num", "-"), el("td", "date", "-"), act);
     rows.append(tr);
   }
+
   for (const o of objs) {
     const name = o.Key.slice(state.prefix.length);
     const tr = el("tr");
@@ -295,13 +346,25 @@ function render(data) {
       el("td", "date", new Date(o.LastModified).toLocaleString()), act);
     rows.append(tr);
   }
-  if (data.truncated) {
+
+  if (state.cursor || (state.filter && shown !== total)) {
     const tr = el("tr");
-    const td = el("td", "loading", "目录项超过 1000，仅显示前 1000 项");
+    tr.className = "more";
+    const td = el("td", "more-cell");
     td.colSpan = 4;
+    const info = el("span", "more-info", state.filter
+      ? `匹配 ${shown} 项 · 已加载 ${total} 项`
+      : `已加载 ${total} 项`);
+    td.append(info);
+    if (state.cursor) {
+      const b = el("button", null, "加载更多");
+      b.onclick = loadMore;
+      td.append(b);
+    }
     tr.append(td);
     rows.append(tr);
   }
+
   paintActive();
 }
 
@@ -618,6 +681,10 @@ function closeModal() {
   $("#mbody").innerHTML = "";
 }
 
+$("#filter").oninput = (ev) => {
+  state.filter = ev.target.value.trim().toLowerCase();
+  if (state.acct && state.bucket) render();
+};
 $("#refresh").onclick = load;
 $("#newfolder").onclick = newFolder;
 $("#addaccount").onclick = openAccountForm;

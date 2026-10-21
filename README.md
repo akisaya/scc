@@ -141,7 +141,8 @@ scc rm -r minio:/tmp/                   # 删除一个前缀
 - 目录浏览带面包屑；当前路径写进 URL（`#/account/bucket/prefix`），刷新和前进后退都正常。
 - 上传支持按钮或拖拽并显示进度，另有新建文件夹、下载、重命名、删除、建桶删桶。
 - 预览弹窗显示路径、大小和修改时间，并提供 `下载` 与 `新标签打开`。
-- 一个目录最多列出 1000 条（S3 单页），超出会明确提示。
+- 目录分页加载：每页 200 条，底部「加载更多」会不断追加并显示已加载数量，不用一次性拉完整目录。
+- 顶部过滤框只过滤**已加载**的项，并在旁边标明匹配数量，避免让人以为漏了文件。
 - 每个 `/api/` 请求都会带状态码和耗时记入日志，浏览器端失败和服务端失败因此很容易区分。
 
 > [!WARNING]
@@ -192,7 +193,7 @@ accounts:
 | `GET` | `/api/b/{acct}/buckets` | 列桶 |
 | `POST` | `/api/b/{acct}/buckets` | 创建桶（`{"name": "..."}`） |
 | `DELETE` | `/api/b/{acct}/buckets/{bucket}` | 删除空桶 |
-| `GET` | `/api/b/{acct}/objects/{bucket}?prefix=&recursive=` | 列一层或列前缀 |
+| `GET` | `/api/b/{acct}/objects/{bucket}?prefix=&cursor=&limit=` | 列一层或列前缀，一页一条游标（`next_cursor`） |
 | `GET` | `/api/b/{acct}/raw/{bucket}/{key}` | 流式读取对象（支持 `Range`、`?download=1`） |
 | `PUT` | `/api/b/{acct}/raw/{bucket}/{key}` | 上传 |
 | `DELETE` | `/api/b/{acct}/raw/{bucket}/{key}` | 删除（`?recursive=1` 删前缀） |

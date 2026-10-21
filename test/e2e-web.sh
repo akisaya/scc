@@ -57,6 +57,17 @@ check "buckets listed" "1" "$(curl -s "$BASE/api/b/local/buckets" | grep -c "\"$
 
 check "upload" "204" "$(printf 'hello web' | code -X PUT --data-binary @- -H 'Content-Type: text/plain' "$BASE/api/b/local/raw/$B/docs/hello.txt")"
 check "list shows object" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=docs/" | grep -c '"Key":"docs/hello.txt"')"
+
+# listing is paginated: one page at a time, with a cursor for the rest
+for n in 1 2 3; do
+  curl -s -o /dev/null -X PUT --data-binary "p$n" "$BASE/api/b/local/raw/$B/pag/$n.txt"
+done
+p1=$(curl -s "$BASE/api/b/local/objects/$B?prefix=pag/&limit=2")
+check "page size is honoured" "2" "$(printf '%s' "$p1" | grep -o '"Key"' | wc -l | tr -d ' ')"
+cur=$(printf '%s' "$p1" | python3 -c 'import json,sys; print(json.load(sys.stdin)["next_cursor"])')
+check "page 1 returns a cursor" "yes" "$([ -n "$cur" ] && echo yes || echo no)"
+check "page 2 returns the rest" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=pag/&limit=2&cursor=$cur" | grep -o '"Key"' | wc -l | tr -d ' ')"
+check "last page has no cursor" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=pag/&limit=2&cursor=$cur" | grep -c '"next_cursor":""')"
 check "preview body" "hello web" "$(curl -s "$BASE/api/b/local/raw/$B/docs/hello.txt")"
 check "preview content-type" "text/plain" "$(curl -s -o /dev/null -w '%{content_type}' "$BASE/api/b/local/raw/$B/docs/hello.txt" | cut -d';' -f1)"
 check "range request" "206" "$(code -H 'Range: bytes=0-4' "$BASE/api/b/local/raw/$B/docs/hello.txt")"
@@ -74,6 +85,7 @@ check "prefix gone" "0" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=docs/" |
 
 check "non-empty bucket is 409" "409" "$(code -X DELETE "$BASE/api/b/local/buckets/$B")"
 code -X DELETE "$BASE/api/b/local/raw/$B/sub/?recursive=1" >/dev/null
+code -X DELETE "$BASE/api/b/local/raw/$B/pag/?recursive=1" >/dev/null
 check "delete bucket" "204" "$(code -X DELETE "$BASE/api/b/local/buckets/$B")"
 check "missing object is 404" "404" "$(code "$BASE/api/b/local/raw/$B/nope.txt")"
 
