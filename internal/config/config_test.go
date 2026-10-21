@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -85,6 +86,22 @@ func mustHome(t *testing.T) string {
 		t.Skip("no home dir")
 	}
 	return home
+}
+
+func TestValidName(t *testing.T) {
+	ok := []string{"minio", "r2", "my-bucket", "a_b.c", "A1", "x.y-z_1"}
+	for _, n := range ok {
+		if err := ValidName(n); err != nil {
+			t.Errorf("ValidName(%q) = %v, want nil", n, err)
+		}
+	}
+	bad := []string{"", ".", "..", "a/b", "a b", "a:b", "a@b", "中文", "café",
+		strings.Repeat("x", 65)}
+	for _, n := range bad {
+		if err := ValidName(n); err == nil {
+			t.Errorf("ValidName(%q) = nil, want error", n)
+		}
+	}
 }
 
 func TestExpand(t *testing.T) {

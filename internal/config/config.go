@@ -73,6 +73,31 @@ func (c *Config) Save() error {
 	return os.WriteFile(c.path, b, 0o600)
 }
 
+// ValidName checks that an account name is safe to use in CLI paths, URLs and
+// the web UI's #/account/bucket/prefix route.
+func ValidName(name string) error {
+	if name == "" {
+		return errors.New("account name must not be empty")
+	}
+	if len(name) > 64 {
+		return fmt.Errorf("account name %q is longer than 64 characters", name)
+	}
+	if name == "." || name == ".." {
+		return fmt.Errorf("account name %q is not allowed", name)
+	}
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z',
+			r >= 'A' && r <= 'Z',
+			r >= '0' && r <= '9',
+			r == '-', r == '_', r == '.':
+		default:
+			return fmt.Errorf("account name %q may only contain letters, digits, '-', '_' and '.'", name)
+		}
+	}
+	return nil
+}
+
 // Account returns a copy with env: indirections resolved, so secrets can stay out of the file.
 func (c *Config) Account(name string) (*Account, error) {
 	for _, a := range c.Accounts {

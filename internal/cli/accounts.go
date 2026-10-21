@@ -69,6 +69,9 @@ func accountsAdd(cfg *config.Config, args []string) error {
 	if *ak == "" || *sk == "" {
 		return errors.New("-access-key and -secret-key are required (env:VAR is allowed)")
 	}
+	if err := config.ValidName(name); err != nil {
+		return err
+	}
 	// Every self-hosted S3 needs path-style; only real AWS wants virtual-host.
 	explicit := false
 	fs.Visit(func(f *flag.Flag) {

@@ -35,6 +35,8 @@ accounts add flags:
   -path-style     use path-style addressing (default when -endpoint is set)
   -default-bucket default bucket used by "acct:" without a bucket
 
+account names use letters, digits, '-', '_' and '.' (max 64 characters)
+
 config file: $SCC_CONFIG, else $XDG_CONFIG_HOME/scc/config.yaml,
              else ~/.config/scc/config.yaml
 `

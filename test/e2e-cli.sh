@@ -10,6 +10,10 @@ trap 'rm -rf "$T" "$(dirname "$BIN")"' EXIT
 export SCC_CONFIG="$T/config.yaml"
 
 go build -o "$BIN" . || exit 1
+if ! curl -s -o /dev/null --max-time 3 "$ENDPOINT"; then
+  echo "no S3 endpoint at $ENDPOINT (start moto/minio or set SCC_TEST_ENDPOINT)" >&2
+  exit 1
+fi
 fail=0
 check() { if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1: expected [$2] got [$3]"; fail=$((fail+1)); fi; }
 

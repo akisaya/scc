@@ -32,6 +32,9 @@ scc accounts list
 scc accounts rm minio
 ```
 
+Account names may contain letters, digits, `-`, `_` and `.` (max 64 characters);
+they appear in CLI paths and in the web UI's URL.
+
 `env:VAR` keeps secrets in your environment instead of the file.
 
 ```yaml
