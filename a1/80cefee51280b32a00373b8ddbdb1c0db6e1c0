@@ -1,0 +1,42 @@
+internal/web/static/app.js
+  s_42f2bbfebdffac::t_d2bcfa22750e85 17-60
+  s_42f2bbfebdffac::t_3ccd670c65e97a 2-14,257-265,268-273,276,279-282,290-291,294-298
+  s_42f2bbfebdffac::t_aaa83b4aaeb664 301,304-315,330,349-350,352-353,355-363,367
+  s_42f2bbfebdffac::t_70f8a424a15511 214-218,684-687
+internal/s3x/ops.go
+  s_42f2bbfebdffac::t_21d16159705602 30-31
+  s_42f2bbfebdffac::t_27681f7f3064aa 55
+  s_42f2bbfebdffac::t_74f8e77d102db9 69-94
+internal/web/server.go
+  s_42f2bbfebdffac::t_34f54034dfb1c0 311-320,326-330
+internal/web/static/index.html
+  s_42f2bbfebdffac::t_88e4ec3d6bfc6f 28
+README.md
+  s_42f2bbfebdffac::t_a5276ff5f738eb 144-145,196
+README.en.md
+  s_42f2bbfebdffac::t_a5276ff5f738eb 144-145,196
+internal/web/static/style.css
+  s_42f2bbfebdffac::t_4f8aa06be30f05 269-290
+  s_42f2bbfebdffac::t_78237f4185e821 444
+test/e2e-web.sh
+  s_42f2bbfebdffac::t_38290a197a8849 88
+  s_42f2bbfebdffac::t_3aae6984c49e7e 60-70
+CHANGELOG.md
+  s_42f2bbfebdffac::t_a5276ff5f738eb 9-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "a180cefee51280b32a00373b8ddbdb1c0db6e1c0",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
