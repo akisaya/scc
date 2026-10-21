@@ -79,3 +79,44 @@ func TestListUncappedFollowsPages(t *testing.T) {
 		t.Fatalf("uncapped list = %d objects, truncated=%t; want 3, false", len(got.Objects), got.Truncated)
 	}
 }
+
+// A key that equals the listed prefix is a real object, not the zero-byte "dir/"
+// placeholder, and must not be dropped.
+func TestListKeepsObjectEqualToPrefix(t *testing.T) {
+	serve := func(key string) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/xml")
+			fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<Name>b</Name><Prefix>%s</Prefix><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys>
+<IsTruncated>false</IsTruncated>
+<Contents><Key>%s</Key><Size>7</Size>
+<LastModified>2026-01-01T00:00:00.000Z</LastModified><ETag>"e"</ETag></Contents>
+</ListBucketResult>`, r.URL.Query().Get("prefix"), key)
+		}))
+	}
+
+	for _, tc := range []struct {
+		prefix  string
+		key     string
+		wantLen int
+	}{
+		{"README", "README", 1}, // exact file name as prefix
+		{"docs/", "docs/", 0},   // a real folder placeholder is still skipped
+		{"docs/a.txt", "docs/a.txt", 1},
+	} {
+		srv := serve(tc.key)
+		c, err := Open(config.Account{Name: "t", Endpoint: srv.URL, AccessKey: "k", SecretKey: "s", PathStyle: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := c.List(context.Background(), "b", tc.prefix, false, 0)
+		srv.Close()
+		if err != nil {
+			t.Fatalf("prefix %q: %v", tc.prefix, err)
+		}
+		if len(got.Objects) != tc.wantLen {
+			t.Errorf("prefix %q, key %q: got %d objects, want %d", tc.prefix, tc.key, len(got.Objects), tc.wantLen)
+		}
+	}
+}

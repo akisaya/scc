@@ -94,11 +94,14 @@ func (c *Client) ListPage(ctx context.Context, bucket, prefix string, recursive 
 
 func (l *Listing) add(page *s3.ListObjectsV2Output, prefix string) {
 	for _, o := range page.Contents {
-		if aws.ToString(o.Key) == prefix {
-			continue // zero-byte placeholder for the folder itself
+		key := aws.ToString(o.Key)
+		// Skip the zero-byte "dir/" placeholder for the folder being listed, but
+		// never a real object that merely happens to equal the prefix.
+		if key == prefix && strings.HasSuffix(prefix, "/") {
+			continue
 		}
 		l.Objects = append(l.Objects, Object{
-			Key:          aws.ToString(o.Key),
+			Key:          key,
 			Size:         aws.ToInt64(o.Size),
 			LastModified: aws.ToTime(o.LastModified),
 			ETag:         aws.ToString(o.ETag),

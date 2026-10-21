@@ -57,6 +57,8 @@ check "buckets listed" "1" "$(curl -s "$BASE/api/b/local/buckets" | grep -c "\"$
 
 check "upload" "204" "$(printf 'hello web' | code -X PUT --data-binary @- -H 'Content-Type: text/plain' "$BASE/api/b/local/raw/$B/docs/hello.txt")"
 check "list shows object" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=docs/" | grep -c '"Key":"docs/hello.txt"')"
+check "prefix equal to a key returns it" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=docs/hello.txt" | grep -c '"Key":"docs/hello.txt"')"
+check "partial key prefix matches" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=docs/hell" | grep -c '"Key":"docs/hello.txt"')"
 
 # listing is paginated: one page at a time, with a cursor for the rest
 for n in 1 2 3; do

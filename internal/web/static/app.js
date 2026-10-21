@@ -295,6 +295,18 @@ function loadMore() {
 
 // matches applies the client-side filter. It only sees what has been loaded so
 // far, which is why the count is shown next to the box.
+// displayBase is the directory part of the current prefix. Names are shown
+// relative to it, so jumping to a partial key ("many/shard_03") or to a file
+// ("README") does not chop the matched names.
+function displayBase() {
+  const i = state.prefix.lastIndexOf("/");
+  return i >= 0 ? state.prefix.slice(0, i + 1) : "";
+}
+
+function displayName(key) {
+  return key.slice(displayBase().length);
+}
+
 function matches(text) {
   if (!state.filter) return true;
   return text.toLowerCase().includes(state.filter);
@@ -304,8 +316,8 @@ function render() {
   const rows = $("#rows");
   rows.innerHTML = "";
 
-  const dirs = state.prefixes.filter((p) => matches(p.slice(state.prefix.length)));
-  const objs = state.objects.filter((o) => matches(o.Key.slice(state.prefix.length)));
+  const dirs = state.prefixes.filter((p) => matches(displayName(p)));
+  const objs = state.objects.filter((o) => matches(displayName(o.Key)));
   state.objectKeys = new Set(state.objects.map((o) => o.Key));
   state.objectByKey = new Map(state.objects.map((o) => [o.Key, o]));
 
@@ -319,7 +331,7 @@ function render() {
       : "空目录";
 
   for (const p of dirs) {
-    const name = p.slice(state.prefix.length).replace(/\/$/, "");
+    const name = displayName(p).replace(/\/$/, "");
     const tr = el("tr");
     const td = el("td", "name");
     td.append(icon(ICON.folder), document.createTextNode(name + "/"));
@@ -333,7 +345,7 @@ function render() {
   }
 
   for (const o of objs) {
-    const name = o.Key.slice(state.prefix.length);
+    const name = displayName(o.Key);
     const tr = el("tr");
     const td = el("td", "name");
     td.append(icon(ICON.file), document.createTextNode(name));

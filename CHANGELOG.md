@@ -81,5 +81,12 @@ changed since then.
 
 ### Fixed
 
+- The jump box now finds a file whose name you typed in full: a listing used to
+  drop an object whose key equalled the requested prefix, because that check was
+  meant for zero-byte `dir/` placeholders.
+- Names are shown relative to the directory part of the prefix, so jumping to a
+  partial key (`README`) or a nested one (`many/shard_03`) no longer truncates
+  the matched names.
+
 - Per-row actions and the bucket delete button stay visible on touch devices,
   where hover never happens.
