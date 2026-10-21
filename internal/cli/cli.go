@@ -30,6 +30,7 @@ commands:
   mb <acct>:/bucket             create a bucket
   rb <acct>:/bucket             delete an empty bucket
   web [-addr host:port]         start the browser UI (default from config listen)
+  version                       print the version (stamped by the release build)
 
 accounts add flags:
   -endpoint       S3 endpoint URL (omit for AWS)

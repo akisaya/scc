@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: darwin, goarch: arm64 }
+          - { goos: darwin, goarch: amd64 }
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          set -e
+          ext=""
+          if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
+          go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+            -o "build/scc${ext}" .
+
+      - name: Archive
+        run: |
+          set -e
+          name="scc-${{ matrix.goos }}-${{ matrix.goarch }}-${{ github.ref_name }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            # Windows users expect a .zip they can extract from Explorer.
+            (cd build && zip -q "../${name}.zip" scc.exe)
+          else
+            (cd build && tar -czf "../${name}.tar.gz" scc)
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scc-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: scc-*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # Full history + tags so the notes can find the previous stable tag.
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Build release notes from CHANGELOG.md
+        run: |
+          set -e
+          ./scripts/release-notes.sh "${GITHUB_REF_NAME}" | tee release-body.md
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          bodyFile: release-body.md
+          draft: false
+          # A tag like v0.1.0-rc1 is a prerelease and must not become "latest".
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          allowUpdates: true
+          artifacts: "artifacts/*"

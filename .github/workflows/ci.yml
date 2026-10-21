@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test -race ./...
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      # The UI has no build step, so there is nothing to bundle; a syntax check
+      # is enough to catch a broken app.js before it ships inside the binary.
+      - name: frontend syntax check
+        run: node --check internal/web/static/app.js
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      # Exercises real signing, Range requests, prefix deletes and both path
+      # forms against an S3 implementation, which unit tests cannot cover.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 19000:9000 \
+            -e MINIO_ROOT_USER=testkey \
+            -e MINIO_ROOT_PASSWORD=testsecret123 \
+            minio/minio server /data
+          for _ in $(seq 1 60); do
+            if curl -fsS -o /dev/null http://127.0.0.1:19000/minio/health/live; then exit 0; fi
+            sleep 2
+          done
+          echo "MinIO did not become ready" >&2
+          docker logs minio >&2
+          exit 1
+
+      - name: CLI end-to-end
+        env:
+          SCC_TEST_ENDPOINT: http://127.0.0.1:19000
+        run: ./test/e2e-cli.sh
+
+      - name: Web end-to-end
+        env:
+          SCC_TEST_ENDPOINT: http://127.0.0.1:19000
+        run: ./test/e2e-web.sh

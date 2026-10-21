@@ -16,6 +16,11 @@ All notable changes to this project are documented here. The format follows
 - Every `/api/` request is logged with its status, so a browser-side failure can
   be checked against what actually reached the server.
 - Flags may follow the path (`ls acct:/dir -n 5`), not only precede it.
+- `scc version` / `scc --version` prints the version, which the release build
+  stamps into the binary.
+- CI (gofmt, vet, `-race` tests, a syntax check of the UI, and both end-to-end
+  scripts against a MinIO container) plus a tag-driven release workflow that
+  publishes macOS, Linux and Windows binaries with notes from this file.
 
 ### Changed
 

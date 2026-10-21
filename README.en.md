@@ -91,6 +91,7 @@ scc <command> [args]
 | `rm [-r] <acct>:/bucket/key` | Delete an object, or every object under a prefix |
 | `mb` / `rb <acct>:/bucket` | Create a bucket / delete an empty one (always explicit) |
 | `web [-addr host:port]` | Start the browser UI |
+| `version` | Print the version (stamped by the release build) |
 
 A tour:
 
@@ -217,6 +218,7 @@ internal/config/         YAML load/save, validation, secret indirection
 internal/s3x/            AWS SDK client, listing/get/put/copy/delete, error hints
 internal/web/            HTTP API, request logging, embedded UI
 internal/web/static/     index.html, app.js, style.css (no build step)
+scripts/                 release-notes.sh: CHANGELOG section -> GitHub Release body
 test/                    end-to-end scripts against a real endpoint
 ```
 
@@ -230,6 +232,8 @@ SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./t
 ```
 
 The end-to-end scripts create their own buckets with a random suffix, check both path forms (an account with a default bucket and one without), and stop early with a clear message when the endpoint is unreachable.
+
+CI runs `gofmt`, `go vet`, `go test -race`, a syntax check of `app.js`, and both end-to-end scripts against a MinIO container. Pushing a tag such as `v0.1.0` builds binaries for macOS, Linux and Windows, attaches them to a GitHub Release, and uses the matching section of `CHANGELOG.md` as the release notes.
 
 ## Limitations
 

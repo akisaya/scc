@@ -91,6 +91,7 @@ scc <command> [args]
 | `rm [-r] <acct>:/bucket/key` | 删除一个对象，或删除某个前缀下的全部对象 |
 | `mb` / `rb <acct>:/bucket` | 创建桶 / 删除空桶（必须写桶名） |
 | `web [-addr host:port]` | 启动网页界面 |
+| `version` | 打印版本号（由发布构建注入） |
 
 来一轮实际操作：
 
@@ -217,6 +218,7 @@ internal/config/         YAML 读写、校验、密钥环境变量替换
 internal/s3x/            AWS SDK 客户端、列目录/读写/拷贝/删除、错误提示
 internal/web/            HTTP API、请求日志、内嵌界面
 internal/web/static/     index.html、app.js、style.css（无构建步骤）
+scripts/                 release-notes.sh：把 CHANGELOG 段落转成 Release 正文
 test/                    针对真实 endpoint 的端到端脚本
 ```
 
@@ -230,6 +232,8 @@ SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./t
 ```
 
 端到端脚本会自己创建带随机后缀的桶，同时覆盖两种路径语义（有默认桶的账号和没有的账号），并在 endpoint 不可达时立刻给出明确提示。
+
+CI 会跑 `gofmt`、`go vet`、`go test -race`、`app.js` 语法检查，以及针对 MinIO 容器的两套端到端脚本。推送 `v0.1.0` 这类 tag 会构建 macOS / Linux / Windows 二进制，挂到 GitHub Release 上，并用 `CHANGELOG.md` 里对应的段落作为发布说明。
 
 ## 限制
 
