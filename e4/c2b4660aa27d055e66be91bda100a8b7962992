@@ -1,0 +1,41 @@
+test/e2e-cli.sh
+  s_42f2bbfebdffac::t_67736e3eef82a0 69-70
+internal/cli/fs.go
+  s_42f2bbfebdffac::t_cef2da0bcdd5cc 17,22,28-33
+  s_42f2bbfebdffac::t_94f90022a9afb2 53
+  s_42f2bbfebdffac::t_27e6b875904004 18,129
+  s_42f2bbfebdffac::t_29fc5701de3176 63-66,70-74
+internal/cli/cli_test.go
+  s_42f2bbfebdffac::t_62019a1878ad9b 3-6
+  s_42f2bbfebdffac::t_4f64fb82a1065c 104-121
+internal/web/static/app.js
+  s_42f2bbfebdffac::t_6e2d9bf2706831 13-19
+internal/cli/cp.go
+  s_42f2bbfebdffac::t_27e6b875904004 22
+CHANGELOG.md
+  s_42f2bbfebdffac::t_5f9ddc860f1ebe 14-18
+internal/cli/cli.go
+  s_42f2bbfebdffac::t_c263a01d0428f6 186-217
+  s_42f2bbfebdffac::t_5cc7a26061c964 22,24-25
+README.md
+  s_42f2bbfebdffac::t_3c4e680bb1f847 76
+internal/web/server.go
+  s_42f2bbfebdffac::t_668f1c1fed2e87 87-118
+  s_42f2bbfebdffac::t_3357bf9312fcc2 11,64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.50-trip",
+  "base_commit_sha": "e4c2b4660aa27d055e66be91bda100a8b7962992",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
