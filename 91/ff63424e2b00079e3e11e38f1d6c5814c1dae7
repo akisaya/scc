@@ -1,0 +1,29 @@
+internal/web/server.go
+  s_42f2bbfebdffac::t_0fd9a22497c6e4 373-377
+main.go
+  s_42f2bbfebdffac::t_2144f330e91158 8
+  s_42f2bbfebdffac::t_261ff6d15ae3eb 14-16
+internal/s3x/errors_test.go
+  s_42f2bbfebdffac::t_634880617ce1b4 6
+  s_42f2bbfebdffac::t_1f3c0b01cf7ab7 1-5,7-12,19,21-29,31-40
+  s_42f2bbfebdffac::t_b415210bbd1ca6 30
+  s_42f2bbfebdffac::t_a1023f876bc205 13-18,20
+internal/s3x/errors.go
+  s_42f2bbfebdffac::t_c852e7ddb3a8cd 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.50-trip",
+  "base_commit_sha": "91ff63424e2b00079e3e11e38f1d6c5814c1dae7",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
