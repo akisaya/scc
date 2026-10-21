@@ -370,7 +370,11 @@ func writeErr(w http.ResponseWriter, err error) {
 	} else if strings.Contains(err.Error(), "not found") {
 		code = http.StatusNotFound
 	}
-	http.Error(w, err.Error(), code)
+	msg := err.Error()
+	if h := s3x.Hint(err); h != "" {
+		msg += "\n" + h
+	}
+	http.Error(w, msg, code)
 }
 
 // urlEscape keeps the Content-Disposition header RFC 5987-safe.
