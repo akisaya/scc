@@ -1,0 +1,27 @@
+CHANGELOG.md
+  s_42f2bbfebdffac::t_2d5bd6e8443fdb 84-90
+internal/s3x/ops.go
+  s_42f2bbfebdffac::t_d416e8dbd6f104 97-101,104
+internal/web/static/app.js
+  s_42f2bbfebdffac::t_b4d65ef679bd9e 298-309,319-320,334,348
+internal/s3x/ops_test.go
+  s_42f2bbfebdffac::t_a691ed90a7121a 82-122
+test/e2e-web.sh
+  s_42f2bbfebdffac::t_46be46a042b121 60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "50d8f2e9afbdcb560bc84cdff5480f3297b82e61",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
