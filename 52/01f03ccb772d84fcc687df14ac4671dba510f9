@@ -1,0 +1,21 @@
+README.md
+  s_42f2bbfebdffac::t_ff9d3f9d033217 5-6
+CHANGELOG.md
+  s_42f2bbfebdffac::t_4c389b0e16d3c7 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.50-trip",
+  "base_commit_sha": "5201f03ccb772d84fcc687df14ac4671dba510f9",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
