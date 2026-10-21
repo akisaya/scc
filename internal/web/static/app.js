@@ -1,5 +1,5 @@
 const $ = (s) => document.querySelector(s);
-const state = { acct: null, bucket: null, prefix: "", accounts: [], objectKeys: new Set() };
+const state = { acct: null, bucket: null, prefix: "", accounts: [], objectKeys: new Set(), objectByKey: new Map() };
 let loadSeq = 0;
 
 const IMG = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "ico"];
@@ -260,6 +260,7 @@ function render(data) {
   const dirs = data.prefixes || [];
   const objs = data.objects || [];
   state.objectKeys = new Set(objs.map((o) => o.Key));
+  state.objectByKey = new Map(objs.map((o) => [o.Key, o]));
   $("#empty").hidden = dirs.length + objs.length > 0 || data.truncated;
   $("#empty").textContent = "空目录";
 
@@ -305,46 +306,57 @@ function render(data) {
 }
 
 function preview(key) {
+  const obj = state.objectByKey.get(key);
   const body = $("#mbody");
   body.innerHTML = "";
   $("#mtitle").textContent = key;
+  $("#mmeta").textContent = obj
+    ? `${fmtSize(obj.Size)} · ${new Date(obj.LastModified).toLocaleString()}`
+    : "";
+  $("#mdownload").href = rawUrl(key, true);
+  $("#mopen").href = rawUrl(key);
   $("#modal").hidden = false;
-  const e = ext(key);
-  const link = `<p><a href="${rawUrl(key, true)}">下载</a> · ${rawUrl(key)}</p>`;
 
+  const e = ext(key);
   if (IMG.includes(e)) {
     const img = new Image();
     img.src = rawUrl(key);
-    img.alt = key;
-    body.append(img, html(link));
+    img.alt = base(key);
+    body.append(img);
   } else if (VIDEO.includes(e)) {
-    body.innerHTML = `<video src="${rawUrl(key)}" controls autoplay></video>${link}`;
+    body.innerHTML = `<video src="${rawUrl(key)}" controls autoplay playsinline></video>`;
   } else if (AUDIO.includes(e)) {
-    body.innerHTML = `<audio src="${rawUrl(key)}" controls autoplay style="width:100%"></audio>${link}`;
+    body.innerHTML = `<audio src="${rawUrl(key)}" controls autoplay style="width:100%"></audio>`;
   } else if (e === "pdf") {
-    body.innerHTML = `<iframe src="${rawUrl(key)}"></iframe>${link}`;
-  } else if (TEXT.includes(e) || e === "") {
+    body.innerHTML = `<iframe src="${rawUrl(key)}" title="${base(key)}"></iframe>`;
+  } else if (TEXT.includes(e)) {
     body.innerHTML = `<pre>加载中…</pre>`;
     fetch(rawUrl(key))
-      .then((r) => r.text())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
       .then((t) => {
         const cut = t.slice(0, 200000);
-        body.innerHTML = `<pre></pre>${link}`;
-        body.querySelector("pre").textContent = cut + (t.length > cut.length ? "\n\n… (已截断)" : "");
+        const pre = el("pre", null, cut + (t.length > cut.length ? "\n\n… (已截断)" : ""));
+        body.replaceChildren(pre);
       })
-      .catch((err) => {
-        body.innerHTML = `<p style="color:var(--danger)"></p>${link}`;
-        body.querySelector("p").textContent = err.message;
-      });
+      .catch((err) => body.replaceChildren(el("div", "err", `读取失败：${err.message}`)));
   } else {
-    body.innerHTML = `<p>无法预览此类型。</p>${link}`;
+    body.append(noPreview(key, obj));
   }
 }
 
-function html(s) {
-  const t = document.createElement("template");
-  t.innerHTML = s.trim();
-  return t.content;
+// noPreview is the card shown for types the browser cannot render.
+function noPreview(key, obj) {
+  const box = el("div", "no-preview");
+  box.append(icon(ICON.file));
+  box.append(el("strong", null, "这个类型无法在浏览器里预览"));
+  const bits = [base(key)];
+  if (obj) bits.push(fmtSize(obj.Size));
+  box.append(el("div", "meta", bits.join(" · ")));
+  box.append(el("div", "meta", "用上方「下载」保存到本地，或「新标签打开」直接取原始内容"));
+  return box;
 }
 
 // askConfirm is an in-app confirmation: native confirm() can be silenced by the

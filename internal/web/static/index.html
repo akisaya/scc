@@ -44,8 +44,15 @@
 <div id="modal" hidden role="dialog" aria-modal="true" aria-label="文件预览">
   <div class="box">
     <div class="head">
-      <span id="mtitle"></span>
-      <button id="mclose" class="ghost">关闭</button>
+      <div class="title">
+        <span id="mtitle"></span>
+        <span id="mmeta" class="meta"></span>
+      </div>
+      <div class="head-actions">
+        <a id="mdownload" class="btn btn-primary">下载</a>
+        <a id="mopen" class="btn ghost" target="_blank" rel="noopener">新标签打开</a>
+        <button id="mclose" class="ghost">关闭</button>
+      </div>
     </div>
     <div id="mbody"></div>
   </div>

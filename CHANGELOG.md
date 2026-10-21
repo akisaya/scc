@@ -25,6 +25,9 @@ All notable changes to this project are documented here. The format follows
   dialogs. Cancel is focused by default.
 - Web UI redesigned: quieter surfaces, rounded controls, sticky table header,
   icon buttons, and a preview/toast treatment that matches the rest.
+- Preview modal puts the file's path, size and timestamp in the header next to a
+  primary 下载 button and 新标签打开; unpreviewable types get a card explaining
+  what to do instead of a raw API URL.
 - Dark and light themes, following the system by default, with a sidebar toggle
   that remembers the choice.
 - Dark theme uses a soft charcoal palette (#1e222a canvas, #262b34 surfaces)
