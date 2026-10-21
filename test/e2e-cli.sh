@@ -66,6 +66,8 @@ check "use restores the default" "hello scc" "$("$BIN" cat "local:/docs/a.txt")"
 "$BIN" cp "$T/a.txt" "local:/docs/c.txt" >/dev/null
 "$BIN" cp "local:/docs/a.txt" "local:/docs/copy.txt" >/dev/null || fail=$((fail+1))
 check "s3 -> s3 copy" "hello scc" "$("$BIN" cat "local:/docs/copy.txt")"
+check "ls -n caps the output" "2" "$("$BIN" ls "local:/docs/" -n 2 | wc -l | tr -d ' ')"
+check "ls -n 0 shows everything" "4" "$("$BIN" ls "local:/docs/" -n 0 | wc -l | tr -d ' ')"
 
 mkdir -p "$T/tree/sub"
 echo one > "$T/tree/1.txt"

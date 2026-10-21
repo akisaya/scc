@@ -73,6 +73,7 @@ scc use minio:/other              # switch the default bucket (minio: clears it)
 scc buckets minio                 # list buckets
 scc ls minio:/docs                # one directory level
 scc ls -r minio:/docs             # everything under a prefix
+scc ls minio:/docs -n 20          # cap the output (-n 0 = no cap)
 scc cat minio:/a.txt > a.txt
 scc cp ./report.pdf minio:/       # upload a file to the bucket root
 scc cp -r ./assets minio:/        # upload a directory

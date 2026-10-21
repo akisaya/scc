@@ -14,15 +14,23 @@ func lsCmd(args []string) error {
 	fs := flag.NewFlagSet("ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	recursive := fs.Bool("r", false, "list recursively")
-	if err := fs.Parse(args); err != nil {
+	limit := fs.Int("n", -1, "max entries to print: -1 = all when piped, 100 on a terminal; 0 = unlimited")
+	if err := fs.Parse(flagsFirst(args, "n")); err != nil {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return errors.New("usage: scc ls <account>:[/bucket[/prefix]] [-r]")
+		return errors.New("usage: scc ls <account>:[/bucket[/prefix]] [-r] [-n N]")
 	}
 	c, t, err := withTarget(fs.Arg(0))
 	if err != nil {
 		return err
+	}
+	max := *limit
+	if max < 0 {
+		max = 0
+		if isTerminal(os.Stdout) {
+			max = defaultListLimit
+		}
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	defer w.Flush()
@@ -42,7 +50,7 @@ func lsCmd(args []string) error {
 	if !*recursive && prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix += "/" // treat "bucket/dir" as a directory, the way a file browser expects
 	}
-	l, err := c.List(ctx(), t.bucket, prefix, *recursive, 0)
+	l, err := c.List(ctx(), t.bucket, prefix, *recursive, int32(max))
 	if err != nil {
 		return err
 	}
@@ -52,7 +60,18 @@ func lsCmd(args []string) error {
 	for _, o := range l.Objects {
 		fmt.Fprintf(w, "%s\t%s\t%s\n", humanSize(o.Size), o.LastModified.Format("2006-01-02 15:04"), nameIn(o.Key, prefix, *recursive))
 	}
+	if l.Truncated {
+		w.Flush()
+		fmt.Fprintf(os.Stderr, "… 只显示了前 %d 项；用 -n 0 显示全部，或 -n <数量> 调整\n", max)
+	}
 	return nil
+}
+
+const defaultListLimit = 100
+
+func isTerminal(f *os.File) bool {
+	fi, err := f.Stat()
+	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
 // nameIn prints names relative to the listed directory, like other S3 tools;
@@ -107,7 +126,7 @@ func rmCmd(args []string) error {
 	fs := flag.NewFlagSet("rm", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	recursive := fs.Bool("r", false, "delete everything under the prefix")
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(flagsFirst(args)); err != nil {
 		return err
 	}
 	if fs.NArg() != 1 {

@@ -11,6 +11,11 @@ All notable changes to this project are documented here. The format follows
 - Add or update accounts in the web UI (`＋ 添加账户`): name, endpoint, region,
   keys, path-style and optional default bucket. An existing name asks before
   overwriting, and the secret is never sent back to the browser.
+- `ls` prints at most 100 entries on a terminal and tells you when it stopped;
+  `-n N` changes the cap, `-n 0` prints everything. Piped output is uncapped.
+- Every `/api/` request is logged with its status, so a browser-side failure can
+  be checked against what actually reached the server.
+- Flags may follow the path (`ls acct:/dir -n 5`), not only precede it.
 
 ### Changed
 

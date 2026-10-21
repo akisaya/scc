@@ -1,6 +1,9 @@
 package cli
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseTarget(t *testing.T) {
 	cases := []struct {
@@ -94,6 +97,24 @@ func TestResolveTarget(t *testing.T) {
 		if got.bucket != c.wantBucket || got.key != c.wantKey {
 			t.Errorf("%s: resolveTarget(%+v, %q) = %+v, want bucket=%q key=%q",
 				c.name, c.in, c.def, got, c.wantBucket, c.wantKey)
+		}
+	}
+}
+
+func TestFlagsFirst(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"acct:/x -n 5", "-n 5 acct:/x"},
+		{"-n 5 acct:/x", "-n 5 acct:/x"},
+		{"acct:/x -r", "-r acct:/x"},
+		{"-r acct:/x -n 2", "-r -n 2 acct:/x"},
+		{"acct:/x -n=2", "-n=2 acct:/x"},
+		{"acct:/x", "acct:/x"},
+		{"a b -r", "-r a b"},
+	}
+	for _, c := range cases {
+		got := strings.Join(flagsFirst(strings.Fields(c.in), "n"), " ")
+		if got != c.want {
+			t.Errorf("flagsFirst(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
 }

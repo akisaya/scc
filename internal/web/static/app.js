@@ -10,7 +10,13 @@ const TEXT = ["txt", "md", "json", "js", "mjs", "ts", "css", "html", "xml", "yam
   "sql", "env", "gitignore", "dockerfile", "makefile"];
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, opts);
+  let res;
+  try {
+    res = await fetch(path, opts);
+  } catch {
+    // the browser only says "Failed to fetch" for connection-level failures
+    throw new Error("连不上 scc web：终端里的服务可能已经停止或重启。确认它还在运行，然后刷新页面重试。");
+  }
   if (!res.ok) {
     const msg = (await res.text()).trim() || res.statusText;
     const err = new Error(msg);

@@ -19,7 +19,7 @@ func cpCmd(args []string) error {
 	fs := flag.NewFlagSet("cp", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	recursive := fs.Bool("r", false, "copy recursively")
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(flagsFirst(args)); err != nil {
 		return err
 	}
 	if fs.NArg() != 2 {

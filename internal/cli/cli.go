@@ -19,8 +19,10 @@ commands:
   accounts rm <name>            remove an account
   use <acct>:/bucket            switch the bucket <acct>: resolves against
                                 (omit the bucket to clear it)
-  ls <acct>:[/bucket[/prefix]] [-r]
+  ls <acct>:[/bucket[/prefix]] [-r] [-n N]
                                 list buckets, objects or a directory
+                                (-n: entries to print; on a terminal 100 by
+                                default, -n 0 prints everything)
   buckets <acct>                list buckets (use when a default bucket is set)
   cat <acct>:/bucket/key        write an object to stdout
   cp [-r] <src> <dst>           copy between local and S3, or S3 to S3
@@ -179,6 +181,38 @@ func bucketTarget(s string) (*s3x.Client, string, error) {
 	}
 	c, _, err := clientFor(t.acct)
 	return c, t.bucket, err
+}
+
+// flagsFirst moves flags ahead of positionals, because the flag package stops at
+// the first positional argument ("ls acct: -n 5" should behave like "ls -n 5 acct:").
+// valueFlags names the flags that consume the following argument.
+func flagsFirst(args []string, valueFlags ...string) []string {
+	takesValue := func(a string) bool {
+		name := strings.TrimLeft(a, "-")
+		if i := strings.IndexByte(name, '='); i >= 0 {
+			return false
+		}
+		for _, v := range valueFlags {
+			if name == v {
+				return true
+			}
+		}
+		return false
+	}
+	var flags, pos []string
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if len(a) > 1 && a[0] == '-' {
+			flags = append(flags, a)
+			if takesValue(a) && i+1 < len(args) {
+				i++
+				flags = append(flags, args[i])
+			}
+			continue
+		}
+		pos = append(pos, a)
+	}
+	return append(flags, pos...)
 }
 
 func ctx() context.Context { return context.Background() }
