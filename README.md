@@ -2,6 +2,8 @@
 
 A small S3-compatible file browser: one Go binary that serves a web UI and a CLI, with accounts stored in a local config file (no database).
 
+See [CHANGELOG.md](CHANGELOG.md) for what changed.
+
 ## Build
 
 ```bash
