@@ -1,0 +1,28 @@
+README.md
+  s_42f2bbfebdffac::t_d7a2a15fa56e59 206
+  s_42f2bbfebdffac::t_a883c8d888bf3b 167
+  s_42f2bbfebdffac::t_1b8092515a2117 202
+  s_42f2bbfebdffac::t_8becdc6b7148c5 1-2,4,6,8-10,13-14,18-21,24-27,29-39,42-53,64-66,68,72-89,91-101,103-105,109-113,115-149,153,162-166,170,172-174,176,178-179,181,183,185-196,198,200,203-205,207,209,211-219,223,225,230-232,234
+  s_42f2bbfebdffac::t_002c6314dbb5b0 69
+  s_42f2bbfebdffac::t_5b2749aabbad34 15
+  s_42f2bbfebdffac::t_0fdf3a7e95f5c5 12,90
+  s_42f2bbfebdffac::t_09cce6ca60868f 102,106-108
+docs/logo.svg
+  s_42f2bbfebdffac::t_8f6d0c7ed055a8 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "4db7b595b2553e4b5e66d296d303da68c8ce6a16",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
