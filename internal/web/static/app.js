@@ -105,7 +105,7 @@ async function loadAccounts() {
       x.title = "删除桶";
       x.onclick = async (ev) => {
         ev.stopPropagation();
-        if (!confirm(`删除桶 ${b}？桶必须为空。`)) return;
+        if (!(await askConfirm(`删除桶 ${b}？桶必须为空，且这个操作无法撤销。`, "删除桶"))) return;
         try {
           await api(`/api/b/${encodeURIComponent(a.name)}/buckets/${encodeURIComponent(b)}`, { method: "DELETE" });
           loadAccounts();
@@ -347,9 +347,41 @@ function html(s) {
   return t.content;
 }
 
+// askConfirm is an in-app confirmation: native confirm() can be silenced by the
+// browser after repeated dialogs, which would let a delete run unconfirmed.
+function askConfirm(text, okLabel) {
+  return new Promise((resolve) => {
+    const dlg = $("#confirm");
+    const ok = $("#cok");
+    const cancel = $("#ccancel");
+    $("#ctext").textContent = text;
+    ok.textContent = okLabel || "删除";
+
+    const finish = (value) => {
+      dlg.hidden = true;
+      ok.onclick = cancel.onclick = dlg.onclick = null;
+      document.removeEventListener("keydown", onKey, true);
+      resolve(value);
+    };
+    // capture phase: keep Escape away from the preview modal behind us
+    const onKey = (ev) => {
+      if (ev.key === "Escape") {
+        ev.stopPropagation();
+        finish(false);
+      }
+    };
+    ok.onclick = () => finish(true);
+    cancel.onclick = () => finish(false);
+    dlg.onclick = (ev) => { if (ev.target === dlg) finish(false); };
+    document.addEventListener("keydown", onKey, true);
+    dlg.hidden = false;
+    cancel.focus();
+  });
+}
+
 async function del(key, isDir) {
   const label = isDir ? `目录 ${key} 及其全部内容` : key;
-  if (!confirm(`删除 ${label}？`)) return;
+  if (!(await askConfirm(`删除 ${label}？`))) return;
   try {
     await api(rawUrl(key) + (isDir ? "?recursive=1" : ""), { method: "DELETE" });
     flash(`已删除 ${key}`);
@@ -361,6 +393,7 @@ async function rename(key) {
   const next = prompt("新名称", base(key));
   if (!next || next === base(key)) return;
   const to = dirOf(key) + next;
+  if (state.objectKeys.has(to) && !(await askConfirm(`${next} 已存在，覆盖？`, "覆盖"))) return;
   try {
     await api(`/api/b/${encodeURIComponent(state.acct)}/copy`, {
       method: "POST",
@@ -469,7 +502,7 @@ function openAccountForm() {
       if (data.default_bucket) openBucket(data.name, data.default_bucket, "");
       flash(`已添加账户 ${data.name}`);
     } catch (e) {
-      if (e.status === 409 && confirm(`账户 ${data.name} 已存在，覆盖它的配置？`)) {
+      if (e.status === 409 && await askConfirm(`账户 ${data.name} 已存在，用新配置覆盖它？`, "覆盖")) {
         try {
           await saveAccount({ ...data, replace: true });
           closeModal();
@@ -510,11 +543,11 @@ function newFolder() {
     .catch((e) => flash(e.message, true));
 }
 
-function uploadFiles(files) {
+async function uploadFiles(files) {
   if (!state.acct || !state.bucket || !files.length) return;
   const key = (f) => state.prefix + f.name;
   const dupes = files.filter((f) => state.objectKeys.has(key(f))).map((f) => f.name);
-  if (dupes.length && !confirm(`${dupes.join("、")} 已存在，覆盖？`)) return;
+  if (dupes.length && !(await askConfirm(`${dupes.join("、")} 已存在，覆盖？`, "覆盖"))) return;
   const total = files.length;
   let done = 0;
   const box = $("#progress");
@@ -582,7 +615,11 @@ $("#upload").onchange = (ev) => {
 };
 $("#mclose").onclick = closeModal;
 $("#modal").onclick = (ev) => { if (ev.target.id === "modal") closeModal(); };
-document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeModal(); });
+document.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Escape") return;
+  if (!$("#confirm").hidden) return; // the confirmation dialog owns Escape
+  closeModal();
+});
 document.addEventListener("dragover", (ev) => ev.preventDefault());
 document.addEventListener("drop", (ev) => {
   ev.preventDefault();

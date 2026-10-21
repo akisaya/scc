@@ -23,6 +23,7 @@
   --accent-soft: rgb(120 171 255 / .16);
   --on-accent: #0d1523;
   --danger: #fb8d8d;
+  --on-danger: #2b1111;
 }
 
 [data-theme="light"] {
@@ -39,6 +40,7 @@
   --accent-soft: rgb(37 99 235 / .11);
   --on-accent: #ffffff;
   --danger: #dc2626;
+  --on-danger: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -320,6 +322,32 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
 #progress .bar { height: 4px; margin-bottom: 7px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
 #progress .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s ease; }
 #progress .lab { color: var(--muted); }
+
+/* ---------- destructive confirm ---------- */
+.btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-danger); font-weight: 500; }
+.btn-danger:hover { background: var(--danger); border-color: var(--danger); filter: brightness(1.06); }
+
+#confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 4vh 6vw;
+  background: rgb(0 0 0 / .5);
+  backdrop-filter: blur(4px);
+}
+#confirm[hidden] { display: none; }
+#confirm .box {
+  width: min(420px, 100%);
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+#confirm p { margin: 0 0 18px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+#confirm .actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ---------- preview ---------- */
 #modal {

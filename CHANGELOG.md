@@ -19,6 +19,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Destructive actions (delete file, delete folder, delete bucket, overwrite on
+  upload, overwrite on rename, replace account) confirm in an in-app dialog
+  instead of `window.confirm`, which browsers silently suppress after a few
+  dialogs. Cancel is focused by default.
 - Web UI redesigned: quieter surfaces, rounded controls, sticky table header,
   icon buttons, and a preview/toast treatment that matches the rest.
 - Dark and light themes, following the system by default, with a sidebar toggle
