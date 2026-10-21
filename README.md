@@ -53,7 +53,9 @@ accounts:
 ## CLI
 
 Object paths are `<account>:/bucket/key`. When an account has a `default_bucket`,
-`acct:` and `acct:/key...` resolve against it.
+`acct:` means that bucket's root and `acct:/sub/dir` means a folder inside it —
+unless `sub` is itself a bucket, because an existing bucket always wins. If the
+account isn't allowed to list buckets, name the bucket explicitly.
 
 ```bash
 scc web [-addr 127.0.0.1:8080]     # browser UI

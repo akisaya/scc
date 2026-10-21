@@ -126,26 +126,20 @@ func mbCmd(args []string) error {
 	if len(args) != 1 {
 		return errors.New("usage: scc mb <account>:/bucket")
 	}
-	c, t, err := withTarget(args[0])
+	c, bucket, err := bucketTarget(args[0])
 	if err != nil {
 		return err
 	}
-	if t.bucket == "" {
-		return errors.New("mb needs a bucket name")
-	}
-	return c.MkBucket(ctx(), t.bucket)
+	return c.MkBucket(ctx(), bucket)
 }
 
 func rbCmd(args []string) error {
 	if len(args) != 1 {
 		return errors.New("usage: scc rb <account>:/bucket")
 	}
-	c, t, err := withTarget(args[0])
+	c, bucket, err := bucketTarget(args[0])
 	if err != nil {
 		return err
 	}
-	if t.bucket == "" {
-		return errors.New("rb needs a bucket name")
-	}
-	return c.RemoveBucket(ctx(), t.bucket)
+	return c.RemoveBucket(ctx(), bucket)
 }

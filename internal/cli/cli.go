@@ -35,6 +35,11 @@ accounts add flags:
   -path-style     use path-style addressing (default when -endpoint is set)
   -default-bucket default bucket used by "acct:" without a bucket
 
+object paths are <account>:/bucket/key. With a default_bucket configured,
+"acct:" means that bucket's root and "acct:/sub/dir" means a folder inside it,
+unless "sub" is itself a bucket - an existing bucket always wins. If the
+account may not list buckets, write the bucket name explicitly.
+
 account names use letters, digits, '-', '_' and '.' (max 64 characters)
 
 config file: $SCC_CONFIG, else $XDG_CONFIG_HOME/scc/config.yaml,
@@ -78,6 +83,7 @@ type target struct {
 	acct   string
 	bucket string
 	key    string
+	dir    bool // the path was written with a trailing slash
 }
 
 func parseTarget(s string) (target, error) {
@@ -86,8 +92,9 @@ func parseTarget(s string) (target, error) {
 		return target{}, fmt.Errorf("expected <account>:/bucket/key, got %q", s)
 	}
 	path = strings.TrimPrefix(path, "/")
+	dir := strings.HasSuffix(path, "/")
 	bucket, key, _ := strings.Cut(path, "/")
-	return target{acct: acct, bucket: bucket, key: key}, nil
+	return target{acct: acct, bucket: bucket, key: key, dir: dir}, nil
 }
 
 func isS3(s string) bool {
@@ -122,10 +129,60 @@ func withTarget(s string) (*s3x.Client, target, error) {
 	if err != nil {
 		return nil, t, err
 	}
-	if t.bucket == "" && acct.DefaultBucket != "" {
-		t.bucket = acct.DefaultBucket
-	}
+	t = resolveTarget(t, acct.DefaultBucket, func(name string) bool { return bucketExists(c, name) })
 	return c, t, nil
+}
+
+// resolveTarget decides what the first path segment means when an account has a
+// default bucket: "acct:/cb_test/" should reach cb_test/ inside it, while
+// "acct:/langfuse/" must still reach the langfuse bucket. A known bucket wins.
+func resolveTarget(t target, def string, exists func(string) bool) target {
+	if t.bucket == "" {
+		t.bucket = def
+		return t
+	}
+	if def == "" || t.bucket == def || exists(t.bucket) {
+		return t
+	}
+	key := t.bucket
+	if t.key != "" {
+		key += "/" + t.key
+	} else if t.dir {
+		key += "/"
+	}
+	t.key = key
+	t.bucket = def
+	return t
+}
+
+// bucketExists reports whether name is a bucket. It assumes yes when the bucket
+// list is unavailable, keeping the explicit "acct:/bucket/key" form working for
+// credentials that may not list buckets.
+func bucketExists(c *s3x.Client, name string) bool {
+	names, err := c.Buckets(ctx())
+	if err != nil {
+		return true
+	}
+	for _, n := range names {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
+
+// bucketTarget handles commands that must name a bucket outright (mb, rb), so the
+// default-bucket remapping can never turn "acct:/newname" into the default bucket.
+func bucketTarget(s string) (*s3x.Client, string, error) {
+	t, err := parseTarget(s)
+	if err != nil {
+		return nil, "", err
+	}
+	if t.bucket == "" || t.key != "" {
+		return nil, "", fmt.Errorf("expected <account>:/bucket, got %q", s)
+	}
+	c, _, err := clientFor(t.acct)
+	return c, t.bucket, err
 }
 
 func ctx() context.Context { return context.Background() }
