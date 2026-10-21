@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/logo.svg" width="84" alt="scc logo">
+  <img src="internal/web/static/logo.svg" width="84" alt="scc logo">
 
   # scc
 

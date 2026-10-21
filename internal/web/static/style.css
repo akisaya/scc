@@ -148,10 +148,10 @@ aside {
   letter-spacing: .01em;
 }
 .brand .logo {
+  display: block;
   width: 22px;
   height: 22px;
   border-radius: 7px;
-  background: linear-gradient(135deg, var(--accent), #8b5cf6);
   box-shadow: var(--shadow-sm);
 }
 .brand #theme { margin-left: auto; }
