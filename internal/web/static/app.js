@@ -11,7 +11,12 @@ const TEXT = ["txt", "md", "json", "js", "mjs", "ts", "css", "html", "xml", "yam
 
 async function api(path, opts = {}) {
   const res = await fetch(path, opts);
-  if (!res.ok) throw new Error((await res.text()).trim() || res.statusText);
+  if (!res.ok) {
+    const msg = (await res.text()).trim() || res.statusText;
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
   const ct = res.headers.get("content-type") || "";
   return ct.includes("json") ? res.json() : res.text();
 }
@@ -22,13 +27,20 @@ const rawUrl = (key, download) =>
   (download ? "?download=1" : "");
 
 function flash(msg, isErr) {
-  const el = $("#progress");
-  el.innerHTML = "";
-  const line = document.createElement("div");
-  line.textContent = msg;
+  const box = $("#progress");
+  box.innerHTML = "";
+  const [detail, ...rest] = String(msg).split("\n");
+  const hint = rest.join(" ").trim();
+  // an error can carry "long SDK text\none actionable sentence" from writeErr
+  const line = el("div", null, isErr && hint ? hint : String(msg).trim());
   if (isErr) line.style.color = "var(--danger)";
-  el.append(line);
-  if (!isErr) setTimeout(() => { if (el.textContent === msg) el.innerHTML = ""; }, 3000);
+  box.append(line);
+  if (isErr && hint) {
+    const raw = el("div", "lab", detail.length > 180 ? detail.slice(0, 180) + "…" : detail);
+    raw.style.fontSize = "11.5px";
+    box.append(raw);
+  }
+  if (!isErr) setTimeout(() => { if (box.textContent === String(msg).trim()) box.innerHTML = ""; }, 3000);
 }
 
 const ext = (k) => (k.split(".").pop() || "").toLowerCase();
@@ -48,7 +60,13 @@ async function loadAccounts() {
   const box = $("#accounts");
   box.innerHTML = "";
   if (!state.accounts.length) {
-    box.innerHTML = `<div class="hint">还没有账号，先运行：<br><code>scc accounts add ...</code></div>`;
+    const hint = el("div", "hint");
+    hint.append(el("div", null, "还没有账号。"));
+    const b = el("button", null, "＋ 添加第一个账户");
+    b.style.marginTop = "10px";
+    b.onclick = openAccountForm;
+    hint.append(b);
+    box.append(hint);
     return;
   }
   for (const a of state.accounts) {
@@ -349,6 +367,133 @@ async function rename(key) {
   } catch (e) { flash(e.message, true); }
 }
 
+function field(labelText, input, hint) {
+  const l = el("label");
+  l.append(el("span", null, labelText), input);
+  if (hint) {
+    const h = el("span", "field-hint", hint);
+    h.style.color = "var(--muted)";
+    h.style.opacity = ".8";
+    l.append(h);
+  }
+  return l;
+}
+
+function textInput(id, placeholder, value) {
+  const i = el("input");
+  i.id = id;
+  i.type = "text";
+  i.placeholder = placeholder || "";
+  i.value = value || "";
+  i.autocomplete = "off";
+  i.spellcheck = false;
+  return i;
+}
+
+function openAccountForm() {
+  $("#mtitle").textContent = "添加账户";
+  $("#modal").querySelector(".box").classList.add("narrow");
+  const body = $("#mbody");
+  body.innerHTML = "";
+
+  const form = el("form", "account-form");
+  const name = textInput("f-name", "minio");
+  const endpoint = textInput("f-endpoint", "http://127.0.0.1:9000（留空表示 AWS）");
+  const region = textInput("f-region", "us-east-1", "us-east-1");
+  const access = textInput("f-access", "access key id");
+  const secret = el("input");
+  secret.id = "f-secret";
+  secret.type = "password";
+  secret.placeholder = "secret access key";
+  secret.autocomplete = "new-password";
+  const bucket = textInput("f-bucket", "可选，填了之后 acct: 直接进这个桶");
+  const pathRow = el("label", "row");
+  const path = el("input");
+  path.type = "checkbox";
+  path.id = "f-path";
+  pathRow.append(path, el("span", null, "path-style 寻址（自建服务通常需要，AWS 不要勾）"));
+
+  const err = el("div", "form-err");
+  const actions = el("div", "form-actions");
+  const cancel = el("button", "ghost", "取消");
+  cancel.type = "button";
+  cancel.onclick = closeModal;
+  const save = el("button", "btn-primary", "保存");
+  save.type = "submit";
+  actions.append(cancel, save);
+
+  form.append(
+    field("名称", name),
+    field("Endpoint", endpoint),
+    field("Region", region),
+    field("Access Key", access),
+    field("Secret Key", secret),
+    field("默认桶", bucket),
+    pathRow,
+    err,
+    actions
+  );
+
+  // AWS has no custom endpoint and must not use path-style addressing
+  const syncPath = () => {
+    const custom = endpoint.value.trim() !== "";
+    path.disabled = !custom;
+    path.checked = custom;
+  };
+  endpoint.addEventListener("input", syncPath);
+  syncPath();
+
+  form.onsubmit = async (ev) => {
+    ev.preventDefault();
+    err.textContent = "";
+    save.disabled = true;
+    const data = {
+      name: name.value.trim(),
+      endpoint: endpoint.value.trim(),
+      region: region.value.trim(),
+      access_key: access.value.trim(),
+      secret_key: secret.value,
+      path_style: path.checked,
+      default_bucket: bucket.value.trim(),
+    };
+    try {
+      await saveAccount(data);
+      closeModal();
+      await loadAccounts();
+      if (data.default_bucket) openBucket(data.name, data.default_bucket, "");
+      flash(`已添加账户 ${data.name}`);
+    } catch (e) {
+      if (e.status === 409 && confirm(`账户 ${data.name} 已存在，覆盖它的配置？`)) {
+        try {
+          await saveAccount({ ...data, replace: true });
+          closeModal();
+          await loadAccounts();
+          if (data.default_bucket) openBucket(data.name, data.default_bucket, "");
+          flash(`已更新账户 ${data.name}`);
+          return;
+        } catch (e2) {
+          err.textContent = e2.message;
+        }
+      } else {
+        err.textContent = e.message;
+      }
+      save.disabled = false;
+    }
+  };
+
+  body.append(form);
+  name.focus();
+  $("#modal").hidden = false;
+}
+
+async function saveAccount(data) {
+  await api("/api/accounts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
 function newFolder() {
   if (!state.acct || !state.bucket) return;
   const name = prompt("文件夹名称");
@@ -416,15 +561,22 @@ async function mkBucket(acct) {
   } catch (e) { flash(e.message, true); }
 }
 
+function closeModal() {
+  $("#modal").hidden = true;
+  $("#modal").querySelector(".box").classList.remove("narrow");
+  $("#mbody").innerHTML = "";
+}
+
 $("#refresh").onclick = load;
 $("#newfolder").onclick = newFolder;
+$("#addaccount").onclick = openAccountForm;
 $("#upload").onchange = (ev) => {
   uploadFiles([...ev.target.files]);
   ev.target.value = "";
 };
-$("#mclose").onclick = () => { $("#modal").hidden = true; $("#mbody").innerHTML = ""; };
-$("#modal").onclick = (ev) => { if (ev.target.id === "modal") $("#mclose").click(); };
-document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") $("#mclose").click(); });
+$("#mclose").onclick = closeModal;
+$("#modal").onclick = (ev) => { if (ev.target.id === "modal") closeModal(); };
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeModal(); });
 document.addEventListener("dragover", (ev) => ev.preventDefault());
 document.addEventListener("drop", (ev) => {
   ev.preventDefault();

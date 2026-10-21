@@ -33,6 +33,7 @@ func Serve(cfg *config.Config) error {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/accounts", handleAccounts)
+	mux.HandleFunc("POST /api/accounts", handleAddAccount)
 	mux.HandleFunc("GET /api/b/{acct}/buckets", handleBuckets)
 	mux.HandleFunc("POST /api/b/{acct}/buckets", handleMkBucket)
 	mux.HandleFunc("DELETE /api/b/{acct}/buckets/{bucket}", handleRmBucket)
@@ -158,6 +159,65 @@ func handleAccounts(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, out)
 }
 
+// handleAddAccount writes a new account to the config file. Credentials never
+// come back out through the API.
+func handleAddAccount(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Name          string `json:"name"`
+		Endpoint      string `json:"endpoint"`
+		Region        string `json:"region"`
+		AccessKey     string `json:"access_key"`
+		SecretKey     string `json:"secret_key"`
+		PathStyle     *bool  `json:"path_style"`
+		DefaultBucket string `json:"default_bucket"`
+		Replace       bool   `json:"replace"`
+	}
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if err := config.ValidName(body.Name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if body.AccessKey == "" || body.SecretKey == "" {
+		http.Error(w, "access_key and secret_key are required", http.StatusBadRequest)
+		return
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	if cfg.Exists(body.Name) && !body.Replace {
+		http.Error(w, fmt.Sprintf("account %q already exists", body.Name), http.StatusConflict)
+		return
+	}
+
+	region := body.Region
+	if region == "" {
+		region = "us-east-1"
+	}
+	endpoint := strings.TrimRight(strings.TrimSpace(body.Endpoint), "/")
+	pathStyle := endpoint != ""
+	if body.PathStyle != nil {
+		pathStyle = *body.PathStyle
+	}
+	cfg.Upsert(config.Account{
+		Name:          body.Name,
+		Endpoint:      endpoint,
+		Region:        region,
+		AccessKey:     body.AccessKey,
+		SecretKey:     body.SecretKey,
+		PathStyle:     pathStyle,
+		DefaultBucket: strings.TrimSpace(body.DefaultBucket),
+	})
+	if err := cfg.Save(); err != nil {
+		writeErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+}
+
 func handleBuckets(w http.ResponseWriter, r *http.Request) {
 	c, _, err := client(r.PathValue("acct"))
 	if err != nil {
@@ -176,8 +236,11 @@ func handleMkBucket(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Name string `json:"name"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Name == "" {
-		http.Error(w, "expected {\"name\": \"...\"}", 400)
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.Name == "" {
+		http.Error(w, `expected {"name": "..."}`, http.StatusBadRequest)
 		return
 	}
 	c, _, err := client(r.PathValue("acct"))
@@ -334,8 +397,11 @@ func handleCopy(w http.ResponseWriter, r *http.Request) {
 		ToBucket   string `json:"to_bucket"`
 		ToKey      string `json:"to_key"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.FromKey == "" || body.ToKey == "" {
-		http.Error(w, "expected {from_bucket, from_key, to_bucket, to_key}", 400)
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.FromKey == "" || body.ToKey == "" {
+		http.Error(w, "expected {from_bucket, from_key, to_bucket, to_key}", http.StatusBadRequest)
 		return
 	}
 	acct := r.PathValue("acct")
@@ -353,6 +419,20 @@ func handleCopy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// decodeJSON rejects anything that is not a JSON body, which also stops a
+// cross-site form post from reaching a handler without a CORS preflight.
+func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		http.Error(w, "expected Content-Type: application/json", http.StatusUnsupportedMediaType)
+		return false
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(v); err != nil {
+		http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)
+		return false
+	}
+	return true
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

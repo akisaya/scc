@@ -104,6 +104,17 @@ func TestValidName(t *testing.T) {
 	}
 }
 
+func TestExists(t *testing.T) {
+	c := &Config{}
+	c.Upsert(Account{Name: "a"})
+	if !c.Exists("a") {
+		t.Error("Exists(a) = false")
+	}
+	if c.Exists("b") {
+		t.Error("Exists(b) = true")
+	}
+}
+
 func TestSetDefaultBucket(t *testing.T) {
 	c := &Config{}
 	c.Upsert(Account{Name: "a"})

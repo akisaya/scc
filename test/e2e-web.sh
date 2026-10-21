@@ -33,11 +33,25 @@ SRV=$!
 for _ in $(seq 1 40); do code "$BASE/api/accounts" >/dev/null 2>&1 && break; sleep 0.25; done
 
 printf '{"name":"%s"}' "$B" > "$T/bucket.json"
+printf '{"name":"added","replace":true,"endpoint":"%s","access_key":"k","secret_key":"topsecret"}' "$ENDPOINT" > "$T/acct-replace.json"
+printf '{"name":"bad name","access_key":"k","secret_key":"s"}' > "$T/acct-bad.json"
+printf '{"name":"nokeys"}' > "$T/acct-nokeys.json"
 printf '{"from_bucket":"%s","from_key":"docs/hello.txt","to_key":"docs/renamed.txt"}' "$B" > "$T/copy.json"
 
 check "index served" "1" "$(curl -s "$BASE/" | grep -c 'id="rows"')"
 check "app.js served" "200" "$(code "$BASE/static/app.js")"
 check "accounts listed" "1" "$(curl -s "$BASE/api/accounts" | grep -c '"name":"local"')"
+
+# adding an account from the web UI
+printf '{"name":"added","endpoint":"%s","access_key":"k","secret_key":"topsecret","default_bucket":"%s"}' "$ENDPOINT" "$B" > "$T/acct.json"
+check "add account" "201" "$(post_json "$BASE/api/accounts" "$T/acct.json")"
+check "account listed" "1" "$(curl -s "$BASE/api/accounts" | grep -c '"name":"added"')"
+check "secret never returned" "0" "$(curl -s "$BASE/api/accounts" | grep -c 'topsecret')"
+check "duplicate account rejected" "409" "$(post_json "$BASE/api/accounts" "$T/acct.json")"
+check "replace account" "201" "$(post_json "$BASE/api/accounts" "$T/acct-replace.json")"
+check "invalid account name" "400" "$(post_json "$BASE/api/accounts" "$T/acct-bad.json")"
+check "missing keys" "400" "$(post_json "$BASE/api/accounts" "$T/acct-nokeys.json")"
+check "form post rejected" "415" "$(code -X POST -d 'name=x' "$BASE/api/accounts")"
 check "create bucket" "204" "$(post_json "$BASE/api/b/local/buckets" "$T/bucket.json")"
 check "buckets listed" "1" "$(curl -s "$BASE/api/b/local/buckets" | grep -c "\"$B\"")"
 

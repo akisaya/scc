@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Add or update accounts in the web UI (`＋ 添加账户`): name, endpoint, region,
+  keys, path-style and optional default bucket. An existing name asks before
+  overwriting, and the secret is never sent back to the browser.
+
 ### Changed
 
 - Web UI redesigned: quieter surfaces, rounded controls, sticky table header,

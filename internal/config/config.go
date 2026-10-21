@@ -120,6 +120,16 @@ func (c *Config) Upsert(a Account) {
 	c.Accounts = append(c.Accounts, a)
 }
 
+// Exists reports whether an account with this name is already configured.
+func (c *Config) Exists(name string) bool {
+	for _, a := range c.Accounts {
+		if a.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // SetDefaultBucket points an account at bucket, or clears it when bucket is empty.
 func (c *Config) SetDefaultBucket(name, bucket string) error {
 	for i := range c.Accounts {

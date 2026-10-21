@@ -154,8 +154,7 @@ aside {
 }
 .brand #theme { margin-left: auto; }
 
-.acct { margin-top: 12px; }
-.acct-head { display: flex; align-items: center; gap: 2px; padding: 0 4px 4px; }
+.acct { margin-top: 12px; }.acct-head { display: flex; align-items: center; gap: 2px; padding: 0 4px 4px; }
 .acct-name {
   flex: 1;
   overflow: hidden;
@@ -197,6 +196,43 @@ aside {
 }
 .bucket:hover .del, .bucket .del:focus-visible { opacity: 1; }
 .bucket .del:hover { background: transparent; color: var(--danger); }
+
+.add-account {
+  margin-top: 12px;
+  width: 100%;
+  justify-content: flex-start;
+  gap: 7px;
+  height: 34px;
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+.add-account:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* ---------- account form ---------- */
+.account-form { display: grid; gap: 13px; max-width: 540px; }
+.account-form label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+.account-form input:not([type=checkbox]) {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.account-form input:not([type=checkbox]):focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.account-form input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); }
+.account-form label.row { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 13px; }
+.account-form .form-err { min-height: 1.2em; color: var(--danger); font-size: 12.5px; white-space: pre-wrap; }
+.account-form .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 /* ---------- main ---------- */
 main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -308,6 +344,7 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
   background: var(--surface);
   box-shadow: var(--shadow-lg);
 }
+#modal .box.narrow { width: min(560px, 100%); }
 #modal .head {
   display: flex;
   align-items: center;

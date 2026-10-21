@@ -93,6 +93,7 @@ scc ls aws:/my-bucket/docs
 `scc web` opens at `http://127.0.0.1:8080`:
 
 - account/bucket sidebar, directory browsing with breadcrumbs
+- add or update an account from the sidebar (`＋ 添加账户`) instead of the CLI
 - the current path lives in the URL (`#/account/bucket/prefix`), so refresh and back/forward work
 - preview for images, video/audio (with seeking), PDF, and text/JSON/code
 - upload (button or drag & drop, with progress), new folder, download, rename, delete
@@ -108,6 +109,8 @@ The web API is plain JSON and usable with curl:
 
 ```
 GET    /api/accounts
+POST   /api/accounts                         {name, endpoint, access_key, secret_key,
+                                              region, path_style, default_bucket, replace}
 GET    /api/b/{acct}/buckets
 POST   /api/b/{acct}/buckets                 {"name": "..."}
 DELETE /api/b/{acct}/buckets/{bucket}
