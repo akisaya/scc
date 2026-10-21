@@ -1,0 +1,32 @@
+internal/cli/fs.go
+  s_42f2bbfebdffac::t_5823a53169af09 129,133,140,144
+README.md
+  s_42f2bbfebdffac::t_368ab12ed5853e 56-58
+internal/cli/cli.go
+  s_42f2bbfebdffac::t_64335733f41def 147-153
+  s_42f2bbfebdffac::t_9a4034c754d7d3 140-141,144
+  s_42f2bbfebdffac::t_65b99f25b04c7e 38-41
+  s_42f2bbfebdffac::t_22f1b4ac7680d8 86,95,97
+  s_42f2bbfebdffac::t_ac73a3ffe9faee 132,136-139,142-143,145-146,154-185
+internal/cli/cli_test.go
+  s_42f2bbfebdffac::t_86e0d1cd7d05d6 9,15-16,34-35
+  s_42f2bbfebdffac::t_f6e409c62e25cd 86-88
+  s_42f2bbfebdffac::t_0269bc8fccb9eb 69-73,79-85,89-98
+  s_42f2bbfebdffac::t_cf9c7f9a9ebab1 74-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.50-trip",
+  "base_commit_sha": "06eec4c662982c513278714e1208b92f08efc292",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
