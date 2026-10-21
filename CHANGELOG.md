@@ -13,6 +13,8 @@ All notable changes to this project are documented here. The format follows
   listing API takes `limit` and `cursor` and returns `next_cursor`.
 - A filter box narrows the loaded entries and reports how many matched, so a
   partial directory is never mistaken for a complete one.
+- A separate jump box takes any S3 prefix and navigates there on Enter, which
+  reaches deep prefixes without paging through everything above them.
 
 ## [0.1.0] - 2026-10-21
 

@@ -219,6 +219,8 @@ async function openBucket(acct, bucket, prefix) {
   state.acct = acct;
   state.bucket = bucket;
   state.prefix = prefix || "";
+  const jump = $("#jumpprefix");
+  if (jump) jump.value = state.prefix;
   paintActive();
   const hash = stateHash();
   if (location.hash !== hash) {
@@ -312,7 +314,9 @@ function render() {
   $("#empty").hidden = shown > 0 || state.cursor !== "";
   $("#empty").textContent = state.filter
     ? `没有匹配项（只在已加载的 ${total} 项里搜索）`
-    : "空目录";
+    : state.prefix
+      ? `前缀 ${state.prefix} 下没有内容，检查一下拼写`
+      : "空目录";
 
   for (const p of dirs) {
     const name = p.slice(state.prefix.length).replace(/\/$/, "");
@@ -680,6 +684,26 @@ function closeModal() {
   $("#modal").querySelector(".box").classList.remove("narrow");
   $("#mbody").innerHTML = "";
 }
+
+// jumpToPrefix navigates by S3 prefix, so it reaches keys that are not loaded yet.
+// The text is used as-is (minus a leading slash): "many/shard_03" is a valid
+// prefix even though it is not a directory, and forcing a trailing slash would
+// make it match nothing.
+function jumpToPrefix(value) {
+  if (!state.acct || !state.bucket) return;
+  const typed = String(value).trim().replace(/^\/+/, "");
+  if (typed === state.prefix) {
+    load();
+    return;
+  }
+  openBucket(state.acct, state.bucket, typed);
+}
+
+$("#jumpprefix").addEventListener("keydown", (ev) => {
+  if (ev.key !== "Enter") return;
+  ev.preventDefault();
+  jumpToPrefix(ev.target.value);
+});
 
 $("#filter").oninput = (ev) => {
   state.filter = ev.target.value.trim().toLowerCase();

@@ -143,6 +143,7 @@ Three forms, no guessing:
 - Preview dialog shows path, size and mtime, with `下载` and `新标签打开`.
 - Directories are paginated: 200 entries per page, and `加载更多` keeps appending while showing how many are loaded.
 - The filter box searches only what has been loaded and says how many items matched, so a partial view is never mistaken for a full one.
+- A separate `跳到前缀` box jumps straight to an S3 prefix on Enter, reaching keys that were never loaded.
 - Every `/api/` request is logged with status and duration, which makes a browser-side failure easy to tell apart from a server-side one.
 
 > [!WARNING]

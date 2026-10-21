@@ -265,7 +265,6 @@ nav a.cur { color: var(--text); font-weight: 500; }
 nav .sep { margin: 0 1px; color: var(--border-strong); }
 
 .tools { display: flex; gap: 8px; }
-
 .filter {
   flex: none;
   width: 180px;
@@ -281,6 +280,7 @@ nav .sep { margin: 0 1px; color: var(--border-strong); }
 }
 .filter::placeholder { color: var(--muted); }
 .filter:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+.filter.jump { width: 210px; }
 
 /* the "load more" row and the loaded-count footer */
 tbody tr.more:hover td { background: transparent; }
@@ -442,6 +442,7 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
   td.date, th.date { display: none; }
   .tools .ghost { display: none; }
   .filter { width: 120px; }
+  .filter.jump { display: none; }
 }
 
 /* no hover: keep per-row actions and the bucket delete always visible */
