@@ -143,7 +143,7 @@ func (c *Client) Delete(ctx context.Context, bucket, key string) error {
 // DeletePrefix removes every object under prefix, batching as the API requires.
 func (c *Client) DeletePrefix(ctx context.Context, bucket, prefix string) (int, error) {
 	if prefix == "" {
-		return 0, errors.New("refusing to delete an entire bucket, use rb instead")
+		return 0, errors.New("refusing to delete a whole bucket at once; name a prefix, e.g. scc rm -r acct:/bucket/dir/")
 	}
 	listed, err := c.List(ctx, bucket, prefix, true, 0)
 	if err != nil {

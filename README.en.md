@@ -237,4 +237,4 @@ CI runs `gofmt`, `go vet`, `go test -race`, a syntax check of `app.js`, and both
 
 ## Limitations
 
-Single user by design. No multipart or resumable uploads, no presigned share links, no object versioning, no search or sorting in the UI, and no cross-account copy. The UI lists one S3 page (1000 keys) at a time; the CLI is uncapped and is the right tool for bulk work.
+Single user by design. No multipart or resumable uploads, no presigned share links, no object versioning, no search or sorting in the UI, and no cross-account copy. The UI lists one S3 page (1000 keys) at a time; the CLI is uncapped and is the right tool for bulk work. Emptying a whole bucket is deliberately not a single command: delete the prefixes you mean, so one slip cannot wipe a bucket.

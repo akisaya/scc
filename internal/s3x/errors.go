@@ -19,7 +19,7 @@ func Hint(err error) string {
 	case strings.Contains(msg, "AccessDenied"):
 		return "the credentials are valid but not allowed to do this; check the account's permissions"
 	case strings.Contains(msg, "BucketNotEmpty"):
-		return "the bucket is not empty; delete its objects first (scc rm -r acct:/bucket/)"
+		return "the bucket is not empty; delete the objects you mean to, e.g. scc rm -r acct:/bucket/<prefix>"
 	case strings.Contains(msg, "NoSuchBucket"):
 		return "no such bucket on this account; run: scc buckets <account>"
 	case strings.Contains(msg, "x509:"), strings.Contains(msg, "certificate"):
