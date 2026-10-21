@@ -67,9 +67,6 @@ func TestJoinKey(t *testing.T) {
 }
 
 func TestResolveTarget(t *testing.T) {
-	buckets := map[string]bool{"langfuse": true}
-	exists := func(n string) bool { return buckets[n] }
-
 	cases := []struct {
 		name       string
 		in         target
@@ -77,18 +74,16 @@ func TestResolveTarget(t *testing.T) {
 		wantBucket string
 		wantKey    string
 	}{
-		{"no default, explicit bucket", target{bucket: "b", key: "k"}, "", "b", "k"},
-		{"no default, no bucket", target{}, "", "", ""},
-		{"empty path takes default", target{}, "data", "data", ""},
-		{"default bucket named explicitly", target{bucket: "data", key: "k"}, "data", "data", "k"},
-		{"real bucket wins", target{bucket: "langfuse", key: "x/y"}, "data", "langfuse", "x/y"},
-		{"folder in default bucket", target{bucket: "cb_test", key: "deep/file.txt"}, "data", "data", "cb_test/deep/file.txt"},
-		{"folder keeps its slash", target{bucket: "cb_test", dir: true}, "data", "data", "cb_test/"},
-		{"root file has no slash", target{bucket: "test_abc"}, "data", "data", "test_abc"},
-		{"folder without slash", target{bucket: "cb_test"}, "data", "data", "cb_test"},
+		{"no default keeps explicit bucket", target{bucket: "b", key: "k"}, "", "b", "k"},
+		{"no default keeps empty", target{}, "", "", ""},
+		{"default takes the root", target{}, "data", "data", ""},
+		{"default swallows the bucket segment", target{bucket: "cb_test", dir: true}, "data", "data", "cb_test/"},
+		{"default swallows nested path", target{bucket: "cb_test", key: "deep/f.txt"}, "data", "data", "cb_test/deep/f.txt"},
+		{"root file keeps no slash", target{bucket: "test_abc"}, "data", "data", "test_abc"},
+		{"another bucket name is just a folder", target{bucket: "langfuse", dir: true}, "data", "data", "langfuse/"},
 	}
 	for _, c := range cases {
-		got := resolveTarget(c.in, c.def, exists)
+		got := resolveTarget(c.in, c.def)
 		if got.bucket != c.wantBucket || got.key != c.wantKey {
 			t.Errorf("%s: resolveTarget(%+v, %q) = %+v, want bucket=%q key=%q",
 				c.name, c.in, c.def, got, c.wantBucket, c.wantKey)

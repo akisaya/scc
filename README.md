@@ -52,26 +52,35 @@ accounts:
 
 ## CLI
 
-Object paths are `<account>:/bucket/key`. When an account has a `default_bucket`,
-`acct:` means that bucket's root and `acct:/sub/dir` means a folder inside it —
-unless `sub` is itself a bucket, because an existing bucket always wins. If the
-account isn't allowed to list buckets, name the bucket explicitly.
+Object paths are `<account>:/bucket/key`. As soon as an account has a `default_bucket`,
+every path is relative to it — `acct:` is its root, `acct:/dir/file` is inside it, and
+the first segment is never mistaken for a bucket. Switch it with:
+
+```bash
+scc use matrix-uat:/other-bucket   # make other-bucket the default
+scc use matrix-uat:                # clear it, so paths name the bucket again
+scc buckets matrix-uat             # list buckets without touching the default
+```
 
 ```bash
 scc web [-addr 127.0.0.1:8080]     # browser UI
+scc use minio:/other              # switch the default bucket (minio: clears it)
 scc buckets minio                 # list buckets
-scc ls minio:/data/docs           # one directory level
-scc ls -r minio:/data/docs        # everything under a prefix
-scc cat minio:/data/a.txt > a.txt
-scc cp ./report.pdf minio:/data/  # upload a file
-scc cp -r ./assets minio:/data/   # upload a directory
-scc cp minio:/data/a.txt ./a.txt  # download
-scc cp -r minio:/data/assets ./   # download a prefix
-scc cp minio:/data/a.txt minio:/data/b.txt   # server-side copy
-scc rm minio:/data/a.txt
-scc rm -r minio:/data/tmp/
-scc mb minio:/newbucket
+scc ls minio:/docs                # one directory level
+scc ls -r minio:/docs             # everything under a prefix
+scc cat minio:/a.txt > a.txt
+scc cp ./report.pdf minio:/       # upload a file to the bucket root
+scc cp -r ./assets minio:/        # upload a directory
+scc cp minio:/a.txt ./a.txt       # download
+scc cp -r minio:/assets ./        # download a prefix
+scc cp minio:/a.txt minio:/b.txt  # server-side copy
+scc rm minio:/a.txt
+scc rm -r minio:/tmp/
+scc mb minio:/newbucket           # mb and rb always name a bucket
 scc rb minio:/newbucket
+
+# without a default bucket the first segment is the bucket
+scc ls aws:/my-bucket/docs
 ```
 
 ## Web

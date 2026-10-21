@@ -17,6 +17,8 @@ commands:
   accounts add <name> [flags]   add or update an account
   accounts list                 list accounts (secrets never printed)
   accounts rm <name>            remove an account
+  use <acct>:/bucket            switch the bucket <acct>: resolves against
+                                (omit the bucket to clear it)
   ls <acct>:[/bucket[/prefix]] [-r]
                                 list buckets, objects or a directory
   buckets <acct>                list buckets (use when a default bucket is set)
@@ -35,10 +37,9 @@ accounts add flags:
   -path-style     use path-style addressing (default when -endpoint is set)
   -default-bucket default bucket used by "acct:" without a bucket
 
-object paths are <account>:/bucket/key. With a default_bucket configured,
-"acct:" means that bucket's root and "acct:/sub/dir" means a folder inside it,
-unless "sub" is itself a bucket - an existing bucket always wins. If the
-account may not list buckets, write the bucket name explicitly.
+object paths are <account>:/bucket/key when no default bucket is set. Once an
+account has one, every path is relative to it: "acct:" is its root and
+"acct:/dir/file" is inside it. Switch with "scc use acct:/bucket".
 
 account names use letters, digits, '-', '_' and '.' (max 64 characters)
 
@@ -54,6 +55,8 @@ func Run(args []string) error {
 	switch cmd, rest := args[0], args[1:]; cmd {
 	case "accounts", "acct":
 		return accountsCmd(rest)
+	case "use":
+		return useCmd(rest)
 	case "ls", "list":
 		return lsCmd(rest)
 	case "buckets":
@@ -129,19 +132,15 @@ func withTarget(s string) (*s3x.Client, target, error) {
 	if err != nil {
 		return nil, t, err
 	}
-	t = resolveTarget(t, acct.DefaultBucket, func(name string) bool { return bucketExists(c, name) })
+	t = resolveTarget(t, acct.DefaultBucket)
 	return c, t, nil
 }
 
-// resolveTarget decides what the first path segment means when an account has a
-// default bucket: "acct:/cb_test/" should reach cb_test/ inside it, while
-// "acct:/langfuse/" must still reach the langfuse bucket. A known bucket wins.
-func resolveTarget(t target, def string, exists func(string) bool) target {
-	if t.bucket == "" {
-		t.bucket = def
-		return t
-	}
-	if def == "" || t.bucket == def || exists(t.bucket) {
+// resolveTarget applies the account's default bucket: when one is configured every
+// path is relative to it, so "acct:/cb_test/" is a folder there, never a bucket.
+// Without a default bucket the first segment is the bucket, as written.
+func resolveTarget(t target, def string) target {
+	if def == "" {
 		return t
 	}
 	key := t.bucket
@@ -153,22 +152,6 @@ func resolveTarget(t target, def string, exists func(string) bool) target {
 	t.key = key
 	t.bucket = def
 	return t
-}
-
-// bucketExists reports whether name is a bucket. It assumes yes when the bucket
-// list is unavailable, keeping the explicit "acct:/bucket/key" form working for
-// credentials that may not list buckets.
-func bucketExists(c *s3x.Client, name string) bool {
-	names, err := c.Buckets(ctx())
-	if err != nil {
-		return true
-	}
-	for _, n := range names {
-		if n == name {
-			return true
-		}
-	}
-	return false
 }
 
 // bucketTarget handles commands that must name a bucket outright (mb, rb), so the

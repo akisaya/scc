@@ -47,12 +47,21 @@ func lsCmd(args []string) error {
 		return err
 	}
 	for _, p := range l.Prefixes {
-		fmt.Fprintf(w, "DIR\t%s\n", p)
+		fmt.Fprintf(w, "DIR\t%s\n", nameIn(p, prefix, *recursive))
 	}
 	for _, o := range l.Objects {
-		fmt.Fprintf(w, "%s\t%s\t%s\n", humanSize(o.Size), o.LastModified.Format("2006-01-02 15:04"), o.Key)
+		fmt.Fprintf(w, "%s\t%s\t%s\n", humanSize(o.Size), o.LastModified.Format("2006-01-02 15:04"), nameIn(o.Key, prefix, *recursive))
 	}
 	return nil
+}
+
+// nameIn prints names relative to the listed directory, like other S3 tools;
+// a recursive listing keeps full keys so the output stays unambiguous.
+func nameIn(key, prefix string, recursive bool) string {
+	if recursive || prefix == "" {
+		return key
+	}
+	return strings.TrimPrefix(key, prefix)
 }
 
 // bucketsCmd lists buckets explicitly, since "acct:" resolves to the default bucket when one is set.

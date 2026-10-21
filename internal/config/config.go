@@ -120,6 +120,17 @@ func (c *Config) Upsert(a Account) {
 	c.Accounts = append(c.Accounts, a)
 }
 
+// SetDefaultBucket points an account at bucket, or clears it when bucket is empty.
+func (c *Config) SetDefaultBucket(name, bucket string) error {
+	for i := range c.Accounts {
+		if c.Accounts[i].Name == name {
+			c.Accounts[i].DefaultBucket = bucket
+			return nil
+		}
+	}
+	return fmt.Errorf("account %q not found (see: scc accounts list)", name)
+}
+
 func (c *Config) Remove(name string) bool {
 	for i := range c.Accounts {
 		if c.Accounts[i].Name == name {

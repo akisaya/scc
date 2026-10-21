@@ -104,6 +104,26 @@ func TestValidName(t *testing.T) {
 	}
 }
 
+func TestSetDefaultBucket(t *testing.T) {
+	c := &Config{}
+	c.Upsert(Account{Name: "a"})
+	if err := c.SetDefaultBucket("a", "data"); err != nil {
+		t.Fatal(err)
+	}
+	if c.Accounts[0].DefaultBucket != "data" {
+		t.Errorf("default = %q", c.Accounts[0].DefaultBucket)
+	}
+	if err := c.SetDefaultBucket("a", ""); err != nil {
+		t.Fatal(err)
+	}
+	if c.Accounts[0].DefaultBucket != "" {
+		t.Errorf("clear failed: %q", c.Accounts[0].DefaultBucket)
+	}
+	if err := c.SetDefaultBucket("ghost", "data"); err == nil {
+		t.Error("expected error for unknown account")
+	}
+}
+
 func TestExpand(t *testing.T) {
 	t.Setenv("SCC_TEST_SECRET", "sccr3t")
 	if got := expand("env:SCC_TEST_SECRET"); got != "sccr3t" {
