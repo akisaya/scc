@@ -1,0 +1,23 @@
+README.en.md
+  s_42f2bbfebdffac::t_38477d12dd2357 236
+.github/workflows/ci.yml
+  s_42f2bbfebdffac::t_dca1ea6e67dcfa 61-73,75-78,80-81
+README.md
+  s_42f2bbfebdffac::t_38477d12dd2357 236
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "b12ae8a0f0fb4cc5a2b9047513c415ada71623ed",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
