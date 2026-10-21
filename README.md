@@ -3,54 +3,56 @@
 
   # scc
 
-  *A small S3-compatible file browser — one binary, a web UI and a CLI*
+  *一个小巧的 S3 兼容文件浏览器 —— 一个二进制，网页界面和命令行都有了*
 
   [![Go](https://img.shields.io/badge/Go-%3E%3D1.24-00add8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
-  [![Single binary](https://img.shields.io/badge/deploy-single%20binary-2ea043?style=flat-square)](#installation)
-  [![No database](https://img.shields.io/badge/state-config%20file-6b7280?style=flat-square)](#configuration)
+  [![单文件部署](https://img.shields.io/badge/%E9%83%A8%E7%BD%B2-%E5%8D%95%E4%B8%AA%E4%BA%8C%E8%BF%9B%E5%88%B6-2ea043?style=flat-square)](#%E5%AE%89%E8%A3%85)
+  [![无数据库](https://img.shields.io/badge/%E7%8A%B6%E6%80%81-%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-6b7280?style=flat-square)](#%E9%85%8D%E7%BD%AE)
 
-  [Features](#features) • [Installation](#installation) • [Getting started](#getting-started) • [Command line](#command-line) • [Path syntax](#path-syntax) • [Web UI](#web-ui) • [Configuration](#configuration) • [Development](#development)
+  [功能](#功能) • [安装](#安装) • [快速开始](#快速开始) • [命令行](#命令行) • [路径语法](#路径语法) • [网页界面](#网页界面) • [配置](#配置) • [开发](#开发)
+
+  **中文** | [English](README.en.md)
 </div>
 
-`scc` browses any S3-compatible storage — MinIO, Ceph RGW, Cloudflare R2, Backblaze B2, AWS S3 — from a browser or a shell, using the same code path for both. Credentials for several accounts live in one local YAML file, so there is nothing to deploy beyond the binary itself: no server-side state, no database, and adding another account is one line of CLI.
+`scc` 可以在浏览器或终端里浏览任何 S3 兼容存储 —— MinIO、Ceph RGW、Cloudflare R2、Backblaze B2、AWS S3 —— 而且两端走的是同一套实现。多个账号的凭证存在一个本地 YAML 文件里，所以除了二进制本身没有别的东西需要部署：没有服务端状态，没有数据库，加一个账号就是一行命令。
 
 ```bash
-go build .                              # produces ./scc
+go build .                              # 产出 ./scc
 ./scc accounts add minio -endpoint http://127.0.0.1:9000 \
   -access-key minioadmin -secret-key minioadmin -default-bucket data
 ./scc web                               # http://127.0.0.1:8080
 ```
 
 > [!TIP]
-> Keep secrets out of the config file by pointing at the environment: `-access-key env:MINIO_KEY -secret-key env:MINIO_SECRET`.
+> 不想把密钥写进配置文件，就用环境变量：`-access-key env:MINIO_KEY -secret-key env:MINIO_SECRET`。
 
-## Features
+## 功能
 
-- **Two front-ends, one binary.** The web UI and the CLI share the same operations layer, so listing, uploading and deleting behave identically in both.
-- **Multiple accounts.** Add, switch and remove S3 accounts without touching JSON or restarting anything; the web UI picks up changes on the next request.
-- **Default bucket per account.** `acct:/dir/file` resolves inside it, so day-to-day paths stay short. `scc use` switches it, `acct://bucket/key` names a bucket explicitly.
-- **Preview in the browser.** Images, video and audio (with seeking), PDFs and text/code render inline; anything else gets a one-click download.
-- **Everything destructive asks twice.** Deleting a file, a folder or a bucket — and overwriting on upload or rename — goes through an in-app confirmation.
-- **Honest errors.** Common S3 failures (wrong secret, unknown key, clock skew, denied, non-empty bucket, TLS, unreachable host) print one actionable `hint:` line instead of raw SDK output.
-- **Dark and light themes.** Follows the system setting, with a toggle that remembers your choice.
+- **一套实现，两个前端。** 网页和命令行共用同一个操作层，列目录、上传、删除的行为完全一致。
+- **多账号。** 增删切换账号不用改 JSON、不用重启；网页每次请求都会重新读配置，改完立刻生效。
+- **每个账号一个默认桶。** `acct:/dir/file` 直接落在默认桶里，日常路径更短。用 `scc use` 切换，用 `acct://bucket/key` 显式指定桶。
+- **浏览器里直接预览。** 图片、视频/音频（可拖进度条）、PDF、文本和代码内联显示，其他类型一键下载。
+- **破坏性操作都要二次确认。** 删除文件、目录、桶，以及上传或重命名时的覆盖，都会弹出应用内确认框。
+- **错误说人话。** 常见 S3 故障（密钥错、AK 不存在、时钟偏移、权限不足、桶非空、TLS、连不上）会多打一行可执行的 `hint:`，而不是甩一整段 SDK 原文。
+- **深色 / 浅色主题。** 默认跟随系统，手动切换后会记住选择。
 
-## Installation
+## 安装
 
-Requires [Go 1.24+](https://go.dev/dl/). The repository has no build step, no npm, and no generated code.
+需要 [Go 1.24+](https://go.dev/dl/)。仓库没有构建步骤，不依赖 npm，也没有生成代码。
 
 ```bash
 git clone <this-repo> scc && cd scc
 go build .          # -> ./scc
-# or
+# 或者
 go install .        # -> $(go env GOPATH)/bin/scc
 ```
 
-## Getting started
+## 快速开始
 
-Add an account, then browse it:
+添加一个账号，然后开始浏览：
 
 ```bash
-# self-hosted MinIO or Ceph: path-style addressing is assumed for custom endpoints
+# 自建 MinIO / Ceph：填了自定义 endpoint 会自动启用 path-style 寻址
 scc accounts add minio \
   -endpoint http://127.0.0.1:9000 \
   -access-key minioadmin -secret-key minioadmin \
@@ -61,92 +63,92 @@ scc accounts add r2 \
   -endpoint https://<account-id>.r2.cloudflarestorage.com \
   -access-key env:R2_ACCESS_KEY -secret-key env:R2_SECRET_KEY
 
-# AWS: no endpoint, virtual-host addressing
+# AWS：不填 endpoint，使用虚拟主机寻址
 scc accounts add aws -region ap-northeast-1 \
   -access-key env:AWS_ACCESS_KEY_ID -secret-key env:AWS_SECRET_ACCESS_KEY
 
-scc accounts list     # secrets are never printed
-scc ls minio:         # root of the default bucket
+scc accounts list     # 永远不会打印 secret
+scc ls minio:         # 默认桶的根目录
 ```
 
-Object references look like `minio:/data/reports/q3.pdf`. Bare account names are validated: letters, digits, `-`, `_`, `.` (max 64 characters), because they appear in paths and URLs.
+对象路径形如 `minio:/data/reports/q3.pdf`。账号名有校验：只能包含字母、数字、`-`、`_`、`.`，最长 64 字符 —— 因为它会出现在路径和 URL 里。
 
-## Command line
+## 命令行
 
 ```
 scc <command> [args]
 ```
 
-| Command | What it does |
+| 命令 | 作用 |
 | --- | --- |
-| `accounts add <name> [flags]` | Add or update an account |
-| `accounts list` / `accounts rm <name>` | List accounts / remove one |
-| `use <acct>:/bucket` | Make `bucket` the account's default (omit it to clear) |
-| `buckets <acct>` | List buckets regardless of the default |
-| `ls <acct>:[/bucket[/prefix]] [-r] [-n N]` | List buckets, a directory, or a whole prefix |
-| `cat <acct>:/bucket/key` | Write an object to stdout |
-| `cp [-r] <src> <dst>` | Copy local ↔ S3, or S3 → S3 |
-| `rm [-r] <acct>:/bucket/key` | Delete an object, or every object under a prefix |
-| `mb` / `rb <acct>:/bucket` | Create a bucket / delete an empty one (always explicit) |
-| `web [-addr host:port]` | Start the browser UI |
+| `accounts add <name> [flags]` | 添加或更新账号 |
+| `accounts list` / `accounts rm <name>` | 列出账号 / 删除账号 |
+| `use <acct>:/bucket` | 把 `bucket` 设为该账号的默认桶（省略桶名即清除） |
+| `buckets <acct>` | 列桶，不受默认桶影响 |
+| `ls <acct>:[/bucket[/prefix]] [-r] [-n N]` | 列桶、列目录，或列整个前缀 |
+| `cat <acct>:/bucket/key` | 把对象写到标准输出 |
+| `cp [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝 |
+| `rm [-r] <acct>:/bucket/key` | 删除一个对象，或删除某个前缀下的全部对象 |
+| `mb` / `rb <acct>:/bucket` | 创建桶 / 删除空桶（必须写桶名） |
+| `web [-addr host:port]` | 启动网页界面 |
 
-A tour:
+来一轮实际操作：
 
 ```bash
-scc buckets minio                       # what exists
-scc ls minio:/reports                   # one level
-scc ls -r minio:/reports -n 20          # first 20 of everything below
+scc buckets minio                       # 有哪些桶
+scc ls minio:/reports                   # 看一层
+scc ls -r minio:/reports -n 20          # 看下面全部，只显示前 20 条
 scc cat minio:/reports/q3.pdf > q3.pdf
-scc cp ./q4.pdf minio:/reports/         # upload a file
-scc cp -r ./assets minio:/reports/      # upload a directory
-scc cp -r minio:/reports/2025 ./reports-2025   # download a prefix
-scc cp minio:/a.txt minio:/b.txt        # server-side copy
-scc rm -r minio:/tmp/                   # delete a prefix
+scc cp ./q4.pdf minio:/reports/         # 上传文件
+scc cp -r ./assets minio:/reports/      # 上传目录
+scc cp -r minio:/reports/2025 ./reports-2025   # 下载一个前缀
+scc cp minio:/a.txt minio:/b.txt        # 服务端直接拷贝
+scc rm -r minio:/tmp/                   # 删除一个前缀
 ```
 
 > [!NOTE]
-> `cp -r` copies the *contents* of a prefix into the destination directory, the way `aws s3 cp --recursive` does, so the example above produces `./reports-2025/<keys under 2025>`. Pass an explicit directory rather than `.` unless you really mean the current one.
+> `cp -r` 是把前缀的**内容**铺进目标目录（和 `aws s3 cp --recursive` 一致），所以上面的例子会得到 `./reports-2025/<2025 下的 key>`。除非确实想放进当前目录，否则请给一个明确的目录。
 
-> [!NOTE]
-> `ls` prints at most 100 entries on a terminal and says where it stopped; `-n 0` prints everything. When the output is piped or redirected it is never capped, so scripts keep seeing the full listing. Flags may come after the path — `scc ls minio:/reports -n 20` works as expected.
+> [!TIP]
+> `ls` 在终端里最多打印 100 条，并告诉你被截断了；`-n 0` 可以打印全部。输出被管道或重定向时不会截断，脚本行为不受影响。选项也可以写在路径后面 —— `scc ls minio:/reports -n 20` 一样有效。
 
-## Path syntax
+## 路径语法
 
-Three forms, no guessing:
+三种写法，没有猜测成分：
 
-| Path | Meaning |
+| 路径 | 含义 |
 | --- | --- |
-| `acct:` | Root of the account's default bucket (falls back to listing buckets when unset) |
-| `acct:/dir/file` | Inside the default bucket. Without a default bucket, the first segment **is** the bucket |
-| `acct://bucket/key` | That bucket, always, whether or not a default is configured |
+| `acct:` | 账号默认桶的根目录（未设置默认桶时退化为列桶） |
+| `acct:/dir/file` | 默认桶内的路径。没有默认桶时，第一段**就是**桶名 |
+| `acct://bucket/key` | 永远是某个桶，无论有没有配置默认桶 |
 
 > [!NOTE]
-> Once a default bucket is set, `acct:/reports/` is a folder there — it is never mistaken for a bucket called `reports`. Use `scc use acct:/other` to move the default, or the double-slash form to reach another bucket in the same command, e.g. `scc cp acct:/a.txt acct://archive/a.txt`.
+> 一旦设了默认桶，`acct:/reports/` 就是里面的一个目录，永远不会被当成名为 `reports` 的桶。要换默认桶用 `scc use acct:/other`；要在同一条命令里访问另一个桶，用双斜杠形式，例如 `scc cp acct:/a.txt acct://archive/a.txt`。
 
-`mb` and `rb` always take an explicit bucket name, so creating a bucket can never be redirected at the default one.
+`mb` 和 `rb` 始终要求写出桶名，所以创建桶永远不会被"默认桶"重定向到别处。
 
-## Web UI
+## 网页界面
 
-`scc web` serves the UI and the JSON API from one listener (default `127.0.0.1:8080`, or `listen` in the config):
+`scc web` 用同一个监听端口提供界面和 JSON API（默认 `127.0.0.1:8080`，或配置里的 `listen`）：
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img src="docs/screenshot-light.png" alt="scc web UI: account sidebar on the left, directory listing on the right">
+  <img src="docs/screenshot-light.png" alt="scc 网页界面：左侧是账号与桶，右侧是目录列表">
 </picture>
 
-- Accounts and buckets in a sidebar; add or update an account from `＋ 添加账户`.
-- Directory browsing with breadcrumbs; the current path lives in the URL (`#/account/bucket/prefix`), so refresh and back/forward behave.
-- Upload by button or drag & drop with progress, new folder, download, rename, delete, create/delete buckets.
-- Preview dialog shows path, size and mtime, with `下载` and `新标签打开`.
-- A directory lists at most 1000 entries (one S3 page) and says when there are more.
-- Every `/api/` request is logged with status and duration, which makes a browser-side failure easy to tell apart from a server-side one.
+- 侧栏列出账号与桶，点 `＋ 添加账户` 可以直接新增或更新账号。
+- 目录浏览带面包屑；当前路径写进 URL（`#/account/bucket/prefix`），刷新和前进后退都正常。
+- 上传支持按钮或拖拽并显示进度，另有新建文件夹、下载、重命名、删除、建桶删桶。
+- 预览弹窗显示路径、大小和修改时间，并提供 `下载` 与 `新标签打开`。
+- 一个目录最多列出 1000 条（S3 单页），超出会明确提示。
+- 每个 `/api/` 请求都会带状态码和耗时记入日志，浏览器端失败和服务端失败因此很容易区分。
 
 > [!WARNING]
-> The server holds your S3 credentials. It binds to loopback by default for that reason. If you expose it on another interface, set `token` in the config first: the UI then requires `?token=...` once (a cookie is set) or `Authorization: Bearer <token>`. There is no per-user access control — the token is a single shared secret.
+> 这个服务掌握着你的 S3 凭证，所以默认只绑回环地址。如果要暴露到其他网卡，请先在配置里设 `token`：之后界面需要 `?token=...` 访问一次（会写入 cookie），或使用 `Authorization: Bearer <token>`。这里没有按用户划分的权限 —— token 只是一个共享密钥。
 
-## Configuration
+## 配置
 
-The file is plain YAML, written with mode `0600`:
+纯 YAML，写入权限为 `0600`：
 
 ```yaml
 listen: 127.0.0.1:8080
@@ -167,68 +169,68 @@ accounts:
       path_style: true
 ```
 
-Location, first match wins:
+文件位置，按顺序取第一个命中：
 
-1. `$SCC_CONFIG` (a full file path)
+1. `$SCC_CONFIG`（完整文件路径）
 2. `$XDG_CONFIG_HOME/scc/config.yaml`
-3. `~/.config/scc/config.yaml` — the same on macOS and Linux
+3. `~/.config/scc/config.yaml` —— macOS 和 Linux 一致
 
-`scc accounts list` prints the path in use. Any string value may be written as `env:NAME` to be resolved from the environment at use time.
+`scc accounts list` 会打印当前实际使用的路径。任何字符串值都可以写成 `env:NAME`，在使用时从环境变量取。
 
 > [!NOTE]
-> There is no database and no daemon: the config file is the only state. `accounts add` and the web form both rewrite it, and the CLI and UI never disagree because they read the same file.
+> 没有数据库，也没有常驻服务：配置文件是唯一的状态。`accounts add` 和网页表单改的是同一个文件，CLI 与界面读的也是同一个文件，所以两者不会不一致。
 
 ## Web API
 
-The UI is a thin client over these endpoints, so anything it does can be scripted:
+界面就是这些接口的薄客户端，所以界面上能做的事都可以脚本来做：
 
-| Method | Path | Purpose |
+| 方法 | 路径 | 用途 |
 | --- | --- | --- |
-| `GET` | `/api/accounts` | Accounts without secrets |
-| `POST` | `/api/accounts` | Add or update (`replace: true` to overwrite) |
-| `GET` | `/api/b/{acct}/buckets` | List buckets |
-| `POST` | `/api/b/{acct}/buckets` | Create a bucket (`{"name": "..."}`) |
-| `DELETE` | `/api/b/{acct}/buckets/{bucket}` | Delete an empty bucket |
-| `GET` | `/api/b/{acct}/objects/{bucket}?prefix=&recursive=` | List a level or a prefix |
-| `GET` | `/api/b/{acct}/raw/{bucket}/{key}` | Stream an object (`Range`, `?download=1`) |
-| `PUT` | `/api/b/{acct}/raw/{bucket}/{key}` | Upload |
-| `DELETE` | `/api/b/{acct}/raw/{bucket}/{key}` | Delete (`?recursive=1` for a prefix) |
-| `POST` | `/api/b/{acct}/copy` | Server-side copy `{from_bucket, from_key, to_bucket, to_key}` |
+| `GET` | `/api/accounts` | 账号列表（不含 secret） |
+| `POST` | `/api/accounts` | 添加或更新（`replace: true` 表示覆盖） |
+| `GET` | `/api/b/{acct}/buckets` | 列桶 |
+| `POST` | `/api/b/{acct}/buckets` | 创建桶（`{"name": "..."}`） |
+| `DELETE` | `/api/b/{acct}/buckets/{bucket}` | 删除空桶 |
+| `GET` | `/api/b/{acct}/objects/{bucket}?prefix=&recursive=` | 列一层或列前缀 |
+| `GET` | `/api/b/{acct}/raw/{bucket}/{key}` | 流式读取对象（支持 `Range`、`?download=1`） |
+| `PUT` | `/api/b/{acct}/raw/{bucket}/{key}` | 上传 |
+| `DELETE` | `/api/b/{acct}/raw/{bucket}/{key}` | 删除（`?recursive=1` 删前缀） |
+| `POST` | `/api/b/{acct}/copy` | 服务端拷贝 `{from_bucket, from_key, to_bucket, to_key}` |
 
-POST bodies must be `Content-Type: application/json`, which also keeps cross-site form posts away from these handlers.
+POST 必须带 `Content-Type: application/json`，这同时也挡住了跨站表单提交。
 
-## S3 compatibility
+## S3 兼容性
 
-- **Addressing.** `scc accounts add` turns `path_style` on whenever a custom `endpoint` is given, and leaves it off for AWS. A hand-written config has to say `path_style: true` itself — gateways such as MinIO and Ceph need it.
-- **Checksums.** Flexible checksums are only calculated when an operation requires them, which is what R2 and B2 expect.
-- **Regions.** `us-east-1` unless specified; some gateways accept any value, others reject the wrong one.
-- **Previewing** goes through the server (streamed, with `Range` support) rather than presigned URLs, so private buckets work without CORS setup and links never expire.
-- **Uploads** are a single `PutObject`, so the S3 per-object limit of 5 GB applies. The web handler first buffers the request body to a temporary file, because the SDK needs a rewindable body in order to hash it.
-- **Destination-copy** across accounts is not supported: `cp` reports it instead of failing with a confusing auth error.
+- **寻址方式。** `scc accounts add` 在填写自定义 `endpoint` 时会自动打开 `path_style`，AWS 则关闭。手写配置文件需要自己写 `path_style: true` —— MinIO、Ceph 这类网关需要它。
+- **校验和。** 只在操作确实要求时才计算 flexible checksum，这正是 R2 和 B2 期望的行为。
+- **Region。** 不填就是 `us-east-1`；有的网关接受任意值，有的会拒绝错误的值。
+- **预览** 走服务端流式代理（支持 `Range`）而不是预签名 URL，所以私有桶不需要配 CORS，链接也不会过期。
+- **上传** 是单次 `PutObject`，受 S3 单对象 5 GB 上限约束。网页端会先把请求体落到临时文件，因为 SDK 需要一个可回退的 body 来算哈希。
+- **跨账号拷贝** 不支持：`cp` 会直接报错，而不是抛出一个让人困惑的鉴权失败。
 
-## Development
+## 开发
 
 ```
-main.go                  entry point, error printing
-internal/cli/            command parsing and the shared target resolution
-internal/config/         YAML load/save, validation, secret indirection
-internal/s3x/            AWS SDK client, listing/get/put/copy/delete, error hints
-internal/web/            HTTP API, request logging, embedded UI
-internal/web/static/     index.html, app.js, style.css (no build step)
-test/                    end-to-end scripts against a real endpoint
+main.go                  入口，错误输出
+internal/cli/            命令解析与路径解析（默认桶逻辑在这里）
+internal/config/         YAML 读写、校验、密钥环境变量替换
+internal/s3x/            AWS SDK 客户端、列目录/读写/拷贝/删除、错误提示
+internal/web/            HTTP API、请求日志、内嵌界面
+internal/web/static/     index.html、app.js、style.css（无构建步骤）
+test/                    针对真实 endpoint 的端到端脚本
 ```
 
 ```bash
 go test ./...
 go vet ./...
 
-# end-to-end; any S3-compatible endpoint works (moto, MinIO, ...)
+# 端到端；任何 S3 兼容 endpoint 都行（moto、MinIO 等）
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 ./test/e2e-cli.sh
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./test/e2e-web.sh
 ```
 
-The end-to-end scripts create their own buckets with a random suffix, check both path forms (an account with a default bucket and one without), and stop early with a clear message when the endpoint is unreachable.
+端到端脚本会自己创建带随机后缀的桶，同时覆盖两种路径语义（有默认桶的账号和没有的账号），并在 endpoint 不可达时立刻给出明确提示。
 
-## Limitations
+## 限制
 
-Single user by design. No multipart or resumable uploads, no presigned share links, no object versioning, no search or sorting in the UI, and no cross-account copy. The UI lists one S3 page (1000 keys) at a time; the CLI is uncapped and is the right tool for bulk work.
+按单用户设计。没有分片或断点续传上传，没有预签名分享链接，没有对象版本管理，界面里没有搜索和排序，也不支持跨账号拷贝。界面一次只列一页（1000 个 key），批量操作请用命令行。
