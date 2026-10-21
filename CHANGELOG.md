@@ -6,15 +6,33 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-21
+
+Browsing large directories no longer dead-ends at one page.
+
 ### Added
 
 - Directories load one page of 200 entries at a time with a `加载更多` row that
-  shows how many are loaded, instead of stopping at a single 1000-key page. The
-  listing API takes `limit` and `cursor` and returns `next_cursor`.
+  shows how many are loaded. The listing API takes `limit` and `cursor` and
+  returns `next_cursor`.
 - A filter box narrows the loaded entries and reports how many matched, so a
   partial directory is never mistaken for a complete one.
 - A separate jump box takes any S3 prefix and navigates there on Enter, which
   reaches deep prefixes without paging through everything above them.
+
+### Changed
+
+- The sidebar account name reads as a heading (12px/700, body colour) instead of
+  a muted label.
+
+### Fixed
+
+- The jump box now finds a file whose name you typed in full: a listing used to
+  drop an object whose key equalled the requested prefix, because that check was
+  meant for zero-byte `dir/` placeholders.
+- Names are shown relative to the directory part of the prefix, so jumping to a
+  partial key (`README`) or a nested one (`many/shard_03`) no longer truncates
+  the matched names.
 
 ## [0.1.0] - 2026-10-21
 
@@ -80,13 +98,6 @@ changed since then.
   instead of near-black, with borders and muted text tuned for it.
 
 ### Fixed
-
-- The jump box now finds a file whose name you typed in full: a listing used to
-  drop an object whose key equalled the requested prefix, because that check was
-  meant for zero-byte `dir/` placeholders.
-- Names are shown relative to the directory part of the prefix, so jumping to a
-  partial key (`README`) or a nested one (`many/shard_03`) no longer truncates
-  the matched names.
 
 - Per-row actions and the bucket delete button stay visible on touch devices,
   where hover never happens.
