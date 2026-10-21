@@ -1,0 +1,32 @@
+test/e2e-cli.sh
+  s_42f2bbfebdffac::t_59b2feabd3ecb7 13-16
+test/e2e-web.sh
+  s_42f2bbfebdffac::t_59b2feabd3ecb7 17-20
+internal/cli/accounts.go
+  s_42f2bbfebdffac::t_4c9dc54d431f3f 72-74
+README.md
+  s_42f2bbfebdffac::t_9f65ebbeedbb7f 35-37
+internal/config/config.go
+  s_42f2bbfebdffac::t_c61695e59bfb77 76-100
+internal/config/config_test.go
+  s_42f2bbfebdffac::t_29ee92c3dac706 6
+  s_42f2bbfebdffac::t_2ab8c8ee52a5c8 91-106
+internal/cli/cli.go
+  s_42f2bbfebdffac::t_b2e5d9385ab70c 38-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.50-trip",
+  "base_commit_sha": "c701ba179579abc2388ec80e141658d28b014cdd",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
