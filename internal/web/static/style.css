@@ -11,18 +11,18 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b0d11;
-  --surface: #12151b;
-  --surface-2: #181c23;
-  --surface-3: #20252e;
-  --border: #232932;
-  --border-strong: #333b47;
-  --text: #e8ecf3;
-  --muted: #8b95a5;
-  --accent: #5b9dff;
-  --accent-soft: rgb(91 157 255 / .15);
-  --on-accent: #08111f;
-  --danger: #f87171;
+  --bg: #1e222a;
+  --surface: #262b34;
+  --surface-2: #2d333e;
+  --surface-3: #363d49;
+  --border: #333a45;
+  --border-strong: #46505f;
+  --text: #e6eaf1;
+  --muted: #9ea8b7;
+  --accent: #78abff;
+  --accent-soft: rgb(120 171 255 / .16);
+  --on-accent: #0d1523;
+  --danger: #fb8d8d;
 }
 
 [data-theme="light"] {

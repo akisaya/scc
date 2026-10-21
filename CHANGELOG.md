@@ -12,6 +12,8 @@ All notable changes to this project are documented here. The format follows
   icon buttons, and a preview/toast treatment that matches the rest.
 - Dark and light themes, following the system by default, with a sidebar toggle
   that remembers the choice.
+- Dark theme uses a soft charcoal palette (#1e222a canvas, #262b34 surfaces)
+  instead of near-black, with borders and muted text tuned for it.
 
 ### Fixed
 
