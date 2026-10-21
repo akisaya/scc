@@ -162,11 +162,11 @@ aside {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .08em;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text);
 }
 .acct-add { width: 22px; height: 22px; padding: 0; border: 0; background: transparent; color: var(--muted); opacity: .55; font-size: 14px; }
 .acct-head:hover .acct-add, .acct-add:focus-visible { opacity: 1; background: var(--surface-2); color: var(--text); }
