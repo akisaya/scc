@@ -1,0 +1,96 @@
+:root {
+  --bg: #16181d;
+  --panel: #1e2128;
+  --panel2: #242833;
+  --line: #2f3540;
+  --text: #dfe3ea;
+  --dim: #8b93a3;
+  --accent: #4c8dff;
+  --danger: #e5564c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; height: 100vh; display: flex;
+  background: var(--bg); color: var(--text);
+  font: 14px/1.5 -apple-system, "SF Pro Text", "PingFang SC", system-ui, sans-serif;
+}
+button, .btn {
+  font: inherit; color: var(--text); background: var(--panel2);
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px;
+  cursor: pointer; white-space: nowrap;
+}
+button:hover, .btn:hover { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+.ghost { background: transparent; border-color: transparent; color: var(--dim); }
+.ghost:hover { color: var(--text); border-color: var(--line); }
+
+aside {
+  width: 260px; flex: none; background: var(--panel); border-right: 1px solid var(--line);
+  padding: 14px; overflow-y: auto;
+}
+.brand { font-weight: 600; letter-spacing: .04em; margin-bottom: 14px; color: var(--dim); }
+.acct { margin-bottom: 14px; }
+.acct-name { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); padding: 4px 6px; }
+.bucket { display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.bucket:hover { background: var(--panel2); }
+.bucket.active { background: var(--panel2); box-shadow: inset 2px 0 0 var(--accent); }
+.bucket .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bucket .del { visibility: hidden; color: var(--dim); padding: 0 4px; border: 0; background: none; }
+.bucket:hover .del { visibility: visible; }
+.bucket .del:hover { color: var(--danger); }
+#addbucket { width: 100%; margin-top: 6px; }
+
+main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+header {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  border-bottom: 1px solid var(--line); flex-wrap: wrap;
+}
+nav { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+nav a { color: var(--dim); cursor: pointer; text-decoration: none; }
+nav a:hover { color: var(--accent); }
+nav .sep { color: var(--line); margin: 0 4px; }
+nav .cur { color: var(--text); }
+.tools { display: flex; gap: 8px; }
+
+#progress { padding: 0 16px; font-size: 12px; color: var(--dim); }
+#progress .bar { height: 3px; background: var(--panel2); border-radius: 2px; overflow: hidden; margin: 4px 0; }
+#progress .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  position: sticky; top: 0; background: var(--bg); text-align: left;
+  font-weight: 500; font-size: 12px; color: var(--dim); padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+tbody td { padding: 7px 16px; border-bottom: 1px solid #20242c; }
+tbody tr:hover { background: var(--panel); }
+td.num, th.num { text-align: right; white-space: nowrap; color: var(--dim); }
+td.date, th.date { white-space: nowrap; color: var(--dim); }
+td.act { text-align: right; white-space: nowrap; }
+td.act button { visibility: hidden; padding: 2px 7px; font-size: 12px; }
+tr:hover td.act button { visibility: visible; }
+td.name { cursor: pointer; overflow: hidden; text-overflow: ellipsis; max-width: 480px; }
+.icon { display: inline-block; width: 18px; color: var(--dim); }
+.hint { padding: 40px 16px; color: var(--dim); }
+
+#modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  display: flex; align-items: center; justify-content: center; padding: 4vh 4vw; z-index: 10;
+}
+#modal[hidden] { display: none; }
+#modal .box {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  width: 100%; max-width: 1000px; max-height: 92vh; display: flex; flex-direction: column;
+}
+#modal .head {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  border-bottom: 1px solid var(--line); font-size: 13px;
+}
+#modal .head span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#mbody { overflow: auto; padding: 14px; }
+#mbody img, #mbody video { max-width: 100%; max-height: 74vh; display: block; margin: 0 auto; }
+#mbody iframe { width: 100%; height: 74vh; border: 0; background: #fff; }
+#mbody pre {
+  margin: 0; white-space: pre-wrap; word-break: break-word;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+}

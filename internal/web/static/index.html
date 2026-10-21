@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scc</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">scc</div>
+  <div id="accounts"></div>
+  <button id="addbucket" class="ghost" hidden>+ 新建桶</button>
+</aside>
+<main>
+  <header>
+    <nav id="crumbs"></nav>
+    <div class="tools">
+      <button id="refresh" class="ghost" title="刷新">刷新</button>
+      <button id="newfolder" class="ghost" title="在当前目录新建文件夹">新建文件夹</button>
+      <label class="btn">上传<input id="upload" type="file" multiple hidden></label>
+    </div>
+  </header>
+  <div id="progress"></div>
+  <table>
+    <thead><tr><th>名称</th><th class="num">大小</th><th class="date">修改时间</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="empty" class="hint" hidden></div>
+</main>
+
+<div id="modal" hidden>
+  <div class="box">
+    <div class="head"><span id="mtitle"></span><button id="mclose" class="ghost">关闭</button></div>
+    <div id="mbody"></div>
+  </div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
