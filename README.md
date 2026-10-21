@@ -100,7 +100,9 @@ scc ls aws:/my-bucket/docs
 - a folder lists at most 1000 entries; a hint tells you when there are more
 
 Set `token` in the config (or append `?token=...` once) to require a shared secret.
-The server binds to `127.0.0.1` by default because it holds your S3 credentials.
+The UI follows the system's dark/light setting; the toggle in the sidebar remembers
+your choice. The server binds to `127.0.0.1` by default because it holds your S3
+credentials.
 
 The web API is plain JSON and usable with curl:
 

@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Web UI redesigned: quieter surfaces, rounded controls, sticky table header,
+  icon buttons, and a preview/toast treatment that matches the rest.
+- Dark and light themes, following the system by default, with a sidebar toggle
+  that remembers the choice.
+
+### Fixed
+
+- Per-row actions and the bucket delete button stay visible on touch devices,
+  where hover never happens.
+
 ## [0.1.0-rc1] - 2026-10-21
 
 First release candidate: one binary serving both a browser UI and a CLI, with

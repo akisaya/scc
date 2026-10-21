@@ -76,7 +76,7 @@ async function loadAccounts() {
       const row = el("div", "bucket");
       row.dataset.acct = a.name;
       row.dataset.bucket = b;
-      row.append(icon("▤"), el("span", "name", b));
+      row.append(icon(ICON.bucket), el("span", "name", b));
       const x = el("button", "del", "×");
       x.title = "删除桶";
       x.onclick = async (ev) => {
@@ -93,7 +93,7 @@ async function loadAccounts() {
     }
     if (a.default_bucket && !buckets.includes(a.default_bucket)) {
       const row = el("div", "bucket");
-      row.append(icon("▤"), el("span", "name", `${a.default_bucket} (默认)`));
+      row.append(icon(ICON.bucket), el("span", "name", `${a.default_bucket} (默认)`));
       row.onclick = () => openBucket(a.name, a.default_bucket, "");
       list.append(row);
     }
@@ -162,6 +162,8 @@ function crumbs() {
     a.onclick = () => openBucket(state.acct, state.bucket, target);
     nav.append(a);
   }
+  const last = nav.lastElementChild;
+  if (last && last.tagName === "A") last.classList.add("cur");
 }
 
 async function load() {
@@ -191,7 +193,42 @@ function el(tag, cls, text) {
   return e;
 }
 
-function icon(ch) { return el("span", "icon", ch); }
+const ICON = {  folder: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z",
+  file: "M7 3h6l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm6 0v5h4",
+  bucket: "M4 7c0-1.1 3.6-2 8-2s8 .9 8 2-3.6 2-8 2-8-.9-8-2Zm0 0v10c0 1.1 3.6 2 8 2s8-.9 8-2V7",
+};
+
+function icon(path) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", "ico");
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  p.setAttribute("d", path);
+  svg.append(p);
+  return svg;
+}
+
+function applyTheme(theme, persist) {
+  document.documentElement.dataset.theme = theme;
+  if (persist) localStorage.setItem("scc-theme", theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("scc-theme");
+  const pick = () => (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  applyTheme(saved || pick(), false);
+  // keep following the system until the user chooses explicitly
+  matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+    if (!localStorage.getItem("scc-theme")) applyTheme(pick(), false);
+  });
+  $("#theme").onclick = () => {
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true);
+  };
+}
+
+initTheme();
+
 
 function render(data) {
   const rows = $("#rows");
@@ -206,7 +243,7 @@ function render(data) {
     const name = p.slice(state.prefix.length).replace(/\/$/, "");
     const tr = el("tr");
     const td = el("td", "name");
-    td.append(icon("▸"), document.createTextNode(name + "/"));
+    td.append(icon(ICON.folder), document.createTextNode(name + "/"));
     td.onclick = () => openBucket(state.acct, state.bucket, p);
     const act = el("td", "act");
     const rm = el("button", null, "删除");
@@ -219,7 +256,7 @@ function render(data) {
     const name = o.Key.slice(state.prefix.length);
     const tr = el("tr");
     const td = el("td", "name");
-    td.append(icon("·"), document.createTextNode(name));
+    td.append(icon(ICON.file), document.createTextNode(name));
     td.onclick = () => preview(o.Key);
     const act = el("td", "act");
     const dl = el("button", null, "下载");
