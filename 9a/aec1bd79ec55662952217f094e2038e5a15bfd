@@ -1,0 +1,25 @@
+internal/s3x/errors.go
+  s_42f2bbfebdffac::t_c845b4eb1b46fd 22
+README.md
+  s_42f2bbfebdffac::t_4b7609f791cc1b 240
+internal/s3x/ops.go
+  s_42f2bbfebdffac::t_c96614d1f2379a 146
+README.en.md
+  s_42f2bbfebdffac::t_4b7609f791cc1b 240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "9aaec1bd79ec55662952217f094e2038e5a15bfd",
+  "prompts": {},
+  "sessions": {
+    "s_42f2bbfebdffac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ea31b9df9ffeaZpKgKk4MmgSZD",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
