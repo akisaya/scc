@@ -23,7 +23,7 @@ B=bucket$RANDOM
 
 "$BIN" accounts add local -endpoint "$ENDPOINT" -access-key "$AK" -secret-key "$SK" -default-bucket "$B" >/dev/null || fail=$((fail+1))
 "$BIN" accounts add plain -endpoint "$ENDPOINT" -access-key "$AK" -secret-key "$SK" >/dev/null || fail=$((fail+1))
-check "accounts file is 0600" "600" "$(stat -f '%Lp' "$SCC_CONFIG" 2>/dev/null || stat -c '%a' "$SCC_CONFIG")"
+check "accounts file is 0600" "1" "$(find "$SCC_CONFIG" -maxdepth 0 -perm 600 | wc -l | tr -d ' ')"
 check "accounts list" "2" "$("$BIN" accounts list | grep -cE '^(local|plain)')"
 
 "$BIN" mb "local:/$B" || fail=$((fail+1))
