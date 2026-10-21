@@ -6,10 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-10-21
+## [0.1.0-rc1] - 2026-10-21
 
-First working version: one binary serving both a browser UI and a CLI, with
-accounts in a local YAML file and no database.
+First release candidate: one binary serving both a browser UI and a CLI, with
+accounts in a local YAML file and no database. The CLI syntax may still change
+before 0.1.0.
 
 ### Added
 
