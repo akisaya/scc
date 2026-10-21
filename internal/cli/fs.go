@@ -42,7 +42,7 @@ func lsCmd(args []string) error {
 	if !*recursive && prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix += "/" // treat "bucket/dir" as a directory, the way a file browser expects
 	}
-	l, err := c.List(ctx(), t.bucket, prefix, *recursive)
+	l, err := c.List(ctx(), t.bucket, prefix, *recursive, 0)
 	if err != nil {
 		return err
 	}

@@ -59,7 +59,7 @@ func Serve(cfg *config.Config) error {
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           auth(cfg.Token, mux),
+		Handler:           auth(cfg.Token, noStore(mux)),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	fmt.Printf("scc web on http://%s\n", cfg.Listen)
@@ -80,6 +80,14 @@ func Serve(cfg *config.Config) error {
 		defer cancel()
 		return srv.Shutdown(ctx)
 	}
+}
+
+// noStore keeps browsers from serving stale embedded assets after an upgrade.
+func noStore(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func isLocal(addr string) bool {
@@ -206,15 +214,16 @@ func handleList(w http.ResponseWriter, r *http.Request) {
 	bucket := r.PathValue("bucket")
 	prefix := r.URL.Query().Get("prefix")
 	recursive := r.URL.Query().Get("recursive") == "1"
-	l, err := c.List(r.Context(), bucket, prefix, recursive)
+	l, err := c.List(r.Context(), bucket, prefix, recursive, 1000)
 	if err != nil {
 		writeErr(w, err)
 		return
 	}
 	writeJSON(w, map[string]any{
-		"prefix":   prefix,
-		"prefixes": l.Prefixes,
-		"objects":  l.Objects,
+		"prefix":    prefix,
+		"prefixes":  l.Prefixes,
+		"objects":   l.Objects,
+		"truncated": l.Truncated,
 	})
 }
 

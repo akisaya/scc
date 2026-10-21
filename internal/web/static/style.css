@@ -30,6 +30,13 @@ aside {
 }
 .brand { font-weight: 600; letter-spacing: .04em; margin-bottom: 14px; color: var(--dim); }
 .acct { margin-bottom: 14px; }
+.acct-head { display: flex; align-items: center; gap: 2px; }
+.acct-head .acct-name { flex: 1; }
+.acct-add {
+  background: none; border-color: transparent; color: var(--dim);
+  padding: 0 7px; font-size: 13px; line-height: 20px; opacity: .55;
+}
+.acct-head:hover .acct-add { opacity: 1; color: var(--text); border-color: var(--line); }
 .acct-name { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); padding: 4px 6px; }
 .bucket { display: flex; align-items: center; gap: 4px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
 .bucket:hover { background: var(--panel2); }
@@ -70,6 +77,7 @@ td.act { text-align: right; white-space: nowrap; }
 td.act button { visibility: hidden; padding: 2px 7px; font-size: 12px; }
 tr:hover td.act button { visibility: visible; }
 td.name { cursor: pointer; overflow: hidden; text-overflow: ellipsis; max-width: 480px; }
+td.loading { color: var(--dim); padding: 20px 16px; }
 .icon { display: inline-block; width: 18px; color: var(--dim); }
 .hint { padding: 40px 16px; color: var(--dim); }
 

@@ -25,8 +25,9 @@ type Object struct {
 
 // Listing holds one directory level unless Recursive was requested.
 type Listing struct {
-	Prefixes []string
-	Objects  []Object
+	Prefixes  []string
+	Objects   []Object
+	Truncated bool // more keys exist than were returned
 }
 
 func (c *Client) Buckets(ctx context.Context) ([]string, error) {
@@ -41,35 +42,51 @@ func (c *Client) Buckets(ctx context.Context) ([]string, error) {
 	return names, nil
 }
 
-func (c *Client) List(ctx context.Context, bucket, prefix string, recursive bool) (*Listing, error) {
+// List returns one level (or everything when recursive). maxKeys > 0 caps the
+// result to a single page, which the UI uses so a huge folder cannot hang the page.
+func (c *Client) List(ctx context.Context, bucket, prefix string, recursive bool, maxKeys int32) (*Listing, error) {
 	in := &s3.ListObjectsV2Input{Bucket: aws.String(bucket), Prefix: aws.String(prefix)}
 	if !recursive {
 		in.Delimiter = aws.String("/")
 	}
 	res := &Listing{}
+	if maxKeys > 0 {
+		in.MaxKeys = aws.Int32(maxKeys)
+		page, err := c.ListObjectsV2(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		res.add(page, prefix)
+		res.Truncated = aws.ToBool(page.IsTruncated)
+		return res, nil
+	}
 	p := s3.NewListObjectsV2Paginator(c.Client, in)
 	for p.HasMorePages() {
 		page, err := p.NextPage(ctx)
 		if err != nil {
 			return nil, err
 		}
-		for _, o := range page.Contents {
-			if aws.ToString(o.Key) == prefix {
-				continue // zero-byte placeholder for the folder itself
-			}
-			res.Objects = append(res.Objects, Object{
-				Key:          aws.ToString(o.Key),
-				Size:         aws.ToInt64(o.Size),
-				LastModified: aws.ToTime(o.LastModified),
-				ETag:         aws.ToString(o.ETag),
-			})
-		}
-		for _, cp := range page.CommonPrefixes {
-			res.Prefixes = append(res.Prefixes, aws.ToString(cp.Prefix))
-		}
+		res.add(page, prefix)
 	}
 	sort.Strings(res.Prefixes)
 	return res, nil
+}
+
+func (l *Listing) add(page *s3.ListObjectsV2Output, prefix string) {
+	for _, o := range page.Contents {
+		if aws.ToString(o.Key) == prefix {
+			continue // zero-byte placeholder for the folder itself
+		}
+		l.Objects = append(l.Objects, Object{
+			Key:          aws.ToString(o.Key),
+			Size:         aws.ToInt64(o.Size),
+			LastModified: aws.ToTime(o.LastModified),
+			ETag:         aws.ToString(o.ETag),
+		})
+	}
+	for _, cp := range page.CommonPrefixes {
+		l.Prefixes = append(l.Prefixes, aws.ToString(cp.Prefix))
+	}
 }
 
 func (c *Client) Get(ctx context.Context, bucket, key string) (*s3.GetObjectOutput, error) {
@@ -128,7 +145,7 @@ func (c *Client) DeletePrefix(ctx context.Context, bucket, prefix string) (int, 
 	if prefix == "" {
 		return 0, errors.New("refusing to delete an entire bucket, use rb instead")
 	}
-	listed, err := c.List(ctx, bucket, prefix, true)
+	listed, err := c.List(ctx, bucket, prefix, true, 0)
 	if err != nil {
 		return 0, err
 	}

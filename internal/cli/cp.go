@@ -58,7 +58,7 @@ func cpS3ToLocal(src, dst string, recursive bool) error {
 		return download(ctx, c, t.bucket, t.key, target)
 	}
 
-	l, err := c.List(ctx, t.bucket, t.key, true)
+	l, err := c.List(ctx, t.bucket, t.key, true, 0)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func cpS3ToS3(src, dst string, recursive bool) error {
 		return nil
 	}
 
-	l, err := sc.List(ctx, st.bucket, st.key, true)
+	l, err := sc.List(ctx, st.bucket, st.key, true, 0)
 	if err != nil {
 		return err
 	}

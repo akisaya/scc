@@ -1,5 +1,6 @@
 const $ = (s) => document.querySelector(s);
-const state = { acct: null, bucket: null, prefix: "", accounts: [] };
+const state = { acct: null, bucket: null, prefix: "", accounts: [], objectKeys: new Set() };
+let loadSeq = 0;
 
 const IMG = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "ico"];
 const VIDEO = ["mp4", "webm", "mov", "m4v", "ogv"];
@@ -51,17 +52,24 @@ async function loadAccounts() {
     return;
   }
   for (const a of state.accounts) {
-    const el = document.createElement("div");
-    el.className = "acct";
-    el.innerHTML = `<div class="acct-name">${a.name}</div>`;
-    const list = document.createElement("div");
-    el.append(list);
-    box.append(el);
+    const block = el("div", "acct");
+    const head = el("div", "acct-head");
+    head.append(el("div", "acct-name", a.name));
+    const add = el("button", "acct-add", "＋");
+    add.title = `在 ${a.name} 新建桶`;
+    add.onclick = () => mkBucket(a.name);
+    head.append(add);
+    block.append(head);
+    const list = el("div");
+    block.append(list);
+    box.append(block);
     let buckets = [];
     try {
       buckets = await api(`/api/b/${encodeURIComponent(a.name)}/buckets`);
     } catch (e) {
-      list.innerHTML = `<div class="bucket" style="color:var(--danger)">${e.message}</div>`;
+      const warn = el("div", "bucket", e.message);
+      warn.style.color = "var(--danger)";
+      list.append(warn);
       continue;
     }
     for (const b of buckets) {
@@ -89,16 +97,37 @@ async function loadAccounts() {
       row.onclick = () => openBucket(a.name, a.default_bucket, "");
       list.append(row);
     }
-    if (a.name === state.acct) $("#addbucket").hidden = false;
   }
-  $("#addbucket").onclick = mkBucket;
 }
 
 function paintActive() {
-  document.querySelectorAll(".bucket").forEach((el) => {
-    el.classList.toggle("active", el.dataset.acct === state.acct && el.dataset.bucket === state.bucket);
+  document.querySelectorAll(".bucket").forEach((b) => {
+    b.classList.toggle("active", b.dataset.acct === state.acct && b.dataset.bucket === state.bucket);
   });
-  $("#addbucket").hidden = !state.acct;
+}
+
+// The current location lives in the URL hash, so refresh and back/forward work.
+function stateHash() {
+  const segs = [state.acct, state.bucket];
+  const parts = state.prefix.split("/").filter(Boolean);
+  return "#/" + [...segs, ...parts].map(encodeURIComponent).join("/") + (parts.length ? "" : "/");
+}
+
+function parseHash() {
+  const raw = location.hash.replace(/^#\/?/, "");
+  if (!raw) return null;
+  const segs = raw.split("/").filter(Boolean).map(decodeURIComponent);
+  if (segs.length < 2) return null;
+  const [acct, bucket, ...rest] = segs;
+  return { acct, bucket, prefix: rest.length ? rest.join("/") + "/" : "" };
+}
+
+function applyHash() {
+  const h = parseHash();
+  if (!h) return false;
+  if (h.acct === state.acct && h.bucket === state.bucket && h.prefix === state.prefix) return true;
+  openBucket(h.acct, h.bucket, h.prefix);
+  return true;
 }
 
 async function openBucket(acct, bucket, prefix) {
@@ -106,6 +135,10 @@ async function openBucket(acct, bucket, prefix) {
   state.bucket = bucket;
   state.prefix = prefix || "";
   paintActive();
+  const hash = stateHash();
+  if (location.hash !== hash) {
+    history.pushState(null, "", hash);
+  }
   await load();
 }
 
@@ -134,12 +167,19 @@ function crumbs() {
 async function load() {
   if (!state.acct || !state.bucket) return;
   crumbs();
+  const seq = ++loadSeq;
+  const rows = $("#rows");
+  rows.innerHTML = `<tr><td colspan="4" class="loading">加载中…</td></tr>`;
+  $("#empty").hidden = true;
   try {
     const data = await api(
       `/api/b/${encodeURIComponent(state.acct)}/objects/${encodeURIComponent(state.bucket)}?prefix=${encodeURIComponent(state.prefix)}`
     );
+    if (seq !== loadSeq) return; // a newer navigation already took over
     render(data);
   } catch (e) {
+    if (seq !== loadSeq) return;
+    rows.innerHTML = "";
     flash(e.message, true);
   }
 }
@@ -158,7 +198,8 @@ function render(data) {
   rows.innerHTML = "";
   const dirs = data.prefixes || [];
   const objs = data.objects || [];
-  $("#empty").hidden = dirs.length + objs.length > 0;
+  state.objectKeys = new Set(objs.map((o) => o.Key));
+  $("#empty").hidden = dirs.length + objs.length > 0 || data.truncated;
   $("#empty").textContent = "空目录";
 
   for (const p of dirs) {
@@ -190,6 +231,13 @@ function render(data) {
     act.append(dl, mv, rm);
     tr.append(td, el("td", "num", fmtSize(o.Size)),
       el("td", "date", new Date(o.LastModified).toLocaleString()), act);
+    rows.append(tr);
+  }
+  if (data.truncated) {
+    const tr = el("tr");
+    const td = el("td", "loading", "目录项超过 1000，仅显示前 1000 项");
+    td.colSpan = 4;
+    tr.append(td);
     rows.append(tr);
   }
   paintActive();
@@ -276,12 +324,15 @@ function newFolder() {
 
 function uploadFiles(files) {
   if (!state.acct || !state.bucket || !files.length) return;
+  const key = (f) => state.prefix + f.name;
+  const dupes = files.filter((f) => state.objectKeys.has(key(f))).map((f) => f.name);
+  if (dupes.length && !confirm(`${dupes.join("、")} 已存在，覆盖？`)) return;
   const total = files.length;
   let done = 0;
-  const el = $("#progress");
-  el.innerHTML = `<div class="bar"><i></i></div><div class="lab"></div>`;
-  const bar = el.querySelector("i");
-  const lab = el.querySelector(".lab");
+  const box = $("#progress");
+  box.innerHTML = `<div class="bar"><i></i></div><div class="lab"></div>`;
+  const bar = box.querySelector("i");
+  const lab = box.querySelector(".lab");
 
   const next = () => {
     if (done >= total) {
@@ -314,17 +365,17 @@ function uploadFiles(files) {
   next();
 }
 
-async function mkBucket() {
-  const name = prompt("新桶名称");
+async function mkBucket(acct) {
+  const name = prompt(`在 ${acct} 新建桶，名称：`);
   if (!name) return;
   try {
-    await api(`/api/b/${encodeURIComponent(state.acct)}/buckets`, {
+    await api(`/api/b/${encodeURIComponent(acct)}/buckets`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
     await loadAccounts();
-    openBucket(state.acct, name, "");
+    openBucket(acct, name, "");
   } catch (e) { flash(e.message, true); }
 }
 
@@ -343,10 +394,18 @@ document.addEventListener("drop", (ev) => {
   if (state.bucket) uploadFiles([...ev.dataTransfer.files]);
 });
 
+window.addEventListener("popstate", applyHash);
+window.addEventListener("hashchange", applyHash);
+
 loadAccounts().then(() => {
+  if (applyHash()) return; // deep link wins
   const a = state.accounts.find((x) => x.default_bucket) || state.accounts[0];
-  if (a) {
-    const b = a.default_bucket || (document.querySelector(`.bucket[data-acct="${a.name}"]`)?.dataset.bucket);
-    if (b) openBucket(a.name, b, "");
+  if (!a) return;
+  const b = a.default_bucket || (document.querySelector(`.bucket[data-acct="${a.name}"]`)?.dataset.bucket);
+  if (b) {
+    openBucket(a.name, b, "");
+  } else {
+    $("#empty").hidden = false;
+    $("#empty").textContent = `点 ${a.name} 右侧的 ＋ 新建桶，或从命令行运行 scc mb ${a.name}:/bucket`;
   }
 });

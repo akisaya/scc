@@ -74,9 +74,11 @@ scc rb minio:/newbucket
 `scc web` opens at `http://127.0.0.1:8080`:
 
 - account/bucket sidebar, directory browsing with breadcrumbs
+- the current path lives in the URL (`#/account/bucket/prefix`), so refresh and back/forward work
 - preview for images, video/audio (with seeking), PDF, and text/JSON/code
 - upload (button or drag & drop, with progress), new folder, download, rename, delete
 - create/delete buckets
+- a folder lists at most 1000 entries; a hint tells you when there are more
 
 Set `token` in the config (or append `?token=...` once) to require a shared secret.
 The server binds to `127.0.0.1` by default because it holds your S3 credentials.
@@ -100,7 +102,8 @@ POST   /api/b/{acct}/copy                    {from_bucket, from_key, to_bucket, 
 - `-path-style` is assumed for any custom endpoint; only real AWS uses virtual-host style.
 - Flexible checksums are limited to when an operation requires them, which is what R2/B2 expect.
 - Web uploads are buffered to a temp file before being sent, because the SDK needs to hash a rewindable body.
-- Keys are listed with `Delimiter=/`, so huge buckets aren't fetched in full.
+- Keys are listed with `Delimiter=/`, so huge buckets aren't fetched in full. The web UI
+  caps a listing at 1000 entries (S3's page size) and says so; the CLI is uncapped.
 
 ## Tests
 
