@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"scc/internal/config"
-	"scc/internal/s3x"
+	"github.com/akisaya/scc/internal/config"
+	"github.com/akisaya/scc/internal/s3x"
 )
 
 const usageText = `scc - a small S3-compatible file browser

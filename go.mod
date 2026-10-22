@@ -1,4 +1,4 @@
-module scc
+module github.com/akisaya/scc
 
 go 1.24
 

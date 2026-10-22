@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"scc/internal/s3x"
+	"github.com/akisaya/scc/internal/s3x"
 )
 
 func cpCmd(args []string) error {

@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"scc/internal/config"
+	"github.com/akisaya/scc/internal/config"
 )
 
 // listServer answers ListObjectsV2 with one page of keys per call, truncated while

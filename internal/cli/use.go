@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"scc/internal/config"
+	"github.com/akisaya/scc/internal/config"
 )
 
 // useCmd switches the bucket an account's paths resolve against.

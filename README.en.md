@@ -38,13 +38,20 @@ go build .                              # produces ./scc
 
 ## Installation
 
-Requires [Go 1.24+](https://go.dev/dl/). The repository has no build step, no npm, and no generated code.
+**No Go?** Grab a prebuilt binary from [Releases](https://github.com/akisaya/scc/releases) — macOS, Linux and Windows, arm64 included — and put `scc` on your `PATH`.
+
+**With [Go 1.24+](https://go.dev/dl/):** no clone needed.
 
 ```bash
-git clone <this-repo> scc && cd scc
+go install github.com/akisaya/scc@latest
+# -> $(go env GOPATH)/bin/scc   (Windows: %USERPROFILE%\go\bin)
+```
+
+Clone only if you want to change the code. The repository has no build step, no npm, and no generated code.
+
+```bash
+git clone https://github.com/akisaya/scc && cd scc
 go build .          # -> ./scc
-# or
-go install .        # -> $(go env GOPATH)/bin/scc
 ```
 
 ## Getting started

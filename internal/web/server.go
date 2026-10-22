@@ -23,8 +23,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
-	"scc/internal/config"
-	"scc/internal/s3x"
+	"github.com/akisaya/scc/internal/config"
+	"github.com/akisaya/scc/internal/s3x"
 )
 
 //go:embed static

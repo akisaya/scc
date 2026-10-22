@@ -5,8 +5,8 @@ import (
 	"flag"
 	"io"
 
-	"scc/internal/config"
-	"scc/internal/web"
+	"github.com/akisaya/scc/internal/config"
+	"github.com/akisaya/scc/internal/web"
 )
 
 func webCmd(args []string) error {

@@ -6,6 +6,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-22
+
+Installing no longer requires the source tree.
+
+### Changed
+
+- Module path is `github.com/akisaya/scc` instead of `scc`, so
+  `go install github.com/akisaya/scc@latest` works without cloning. Tags before
+  0.3.0 declare `module scc` and cannot be fetched under the new path; 0.3.0 is
+  the first release installable that way.
+
+### Documentation
+
+- README lists the prebuilt binaries attached to each release (macOS, Linux,
+  Windows; amd64 and arm64) for people who would rather not install Go.
+
 ## [0.2.0] - 2026-10-21
 
 Browsing large directories no longer dead-ends at one page.

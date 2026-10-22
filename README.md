@@ -38,13 +38,20 @@ go build .                              # 产出 ./scc
 
 ## 安装
 
-需要 [Go 1.24+](https://go.dev/dl/)。仓库没有构建步骤，不依赖 npm，也没有生成代码。
+**不想装 Go**：到 [Releases](https://github.com/akisaya/scc/releases) 下载对应平台的预编译包（macOS / Linux / Windows，含 arm64），解压后把 `scc` 放进 `PATH`。
+
+**有 [Go 1.24+](https://go.dev/dl/)**：不用克隆仓库。
 
 ```bash
-git clone <this-repo> scc && cd scc
+go install github.com/akisaya/scc@latest
+# -> $(go env GOPATH)/bin/scc   (Windows: %USERPROFILE%\go\bin)
+```
+
+需要改代码时才克隆。仓库没有构建步骤，不依赖 npm，也没有生成代码。
+
+```bash
+git clone https://github.com/akisaya/scc && cd scc
 go build .          # -> ./scc
-# 或者
-go install .        # -> $(go env GOPATH)/bin/scc
 ```
 
 ## 快速开始

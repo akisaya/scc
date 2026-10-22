@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"scc/internal/cli"
-	"scc/internal/s3x"
+	"github.com/akisaya/scc/internal/cli"
+	"github.com/akisaya/scc/internal/s3x"
 )
 
 // version is stamped by the release workflow (-X main.version=v1.2.3).

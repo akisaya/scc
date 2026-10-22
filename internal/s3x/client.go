@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"scc/internal/config"
+	"github.com/akisaya/scc/internal/config"
 )
 
 type Client struct {
