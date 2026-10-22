@@ -1,0 +1,43 @@
+internal/cli/accounts.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 12
+internal/cli/cli.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 8-9
+internal/cli/cp.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 15
+internal/cli/use.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 7
+go.mod
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 1
+internal/s3x/client.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 10
+internal/s3x/ops_test.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 12
+main.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 7-8
+README.md
+  s_b5f5d7d7d947c0::t_e910dcbf616bca 41-50,53
+internal/web/server.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 26-27
+internal/cli/web.go
+  s_b5f5d7d7d947c0::t_726f2bdc28db2a 8-9
+README.en.md
+  s_b5f5d7d7d947c0::t_1e540148fdcc34 41-50,53
+CHANGELOG.md
+  s_b5f5d7d7d947c0::t_fe5127876e9b8e 9-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "4540ae7fba3398276a36b470b27cf40d5dfc7043",
+  "prompts": {},
+  "sessions": {
+    "s_b5f5d7d7d947c0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e9dcafa23ffe8A125LT4UmmQ5e",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
