@@ -75,6 +75,13 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Generate checksums
+        run: |
+          set -e
+          cd artifacts
+          sha256sum scc-* > checksums.txt
+          cat checksums.txt
+
       - name: Build release notes from CHANGELOG.md
         run: |
           set -e

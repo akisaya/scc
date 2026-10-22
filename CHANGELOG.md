@@ -10,6 +10,10 @@ All notable changes to this project are documented here. The format follows
 
 Installing no longer requires the source tree.
 
+### Added
+
+- Each release ships `checksums.txt` with a SHA-256 for every archive.
+
 ### Changed
 
 - Module path is `github.com/akisaya/scc` instead of `scc`, so
