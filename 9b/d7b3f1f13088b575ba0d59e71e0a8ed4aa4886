@@ -1,0 +1,21 @@
+CHANGELOG.md
+  s_b5f5d7d7d947c0::t_9d1a1fed2ff215 13-16
+.github/workflows/release.yml
+  s_b5f5d7d7d947c0::t_3f193096a05a2e 78-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "9bd7b3f1f13088b575ba0d59e71e0a8ed4aa4886",
+  "prompts": {},
+  "sessions": {
+    "s_b5f5d7d7d947c0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_e9dcafa23ffe8A125LT4UmmQ5e",
+        "model": "claude-deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
