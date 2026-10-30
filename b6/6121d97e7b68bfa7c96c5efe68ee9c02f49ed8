@@ -1,0 +1,24 @@
+internal/web/static/style.css
+  s_93ad02791282a0::t_937cc1ea0f1aa0 409
+internal/web/static/app.js
+  s_93ad02791282a0::t_d01d2707be9736 525-527
+  s_93ad02791282a0::t_e30e36b5925c16 700
+CHANGELOG.md
+  s_93ad02791282a0::t_436481994f0fb1 9-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "b66121d97e7b68bfa7c96c5efe68ee9c02f49ed8",
+  "prompts": {},
+  "sessions": {
+    "s_93ad02791282a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c1bb84f6-acf9-45ac-8cd3-86bc535ac72d",
+        "model": "claude-opus-5.5"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
