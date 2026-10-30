@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-30
+
+The add-account dialog shows only what the form needs.
+
 ### Fixed
 
 - The add-account dialog no longer shows the preview's 下载 / 新标签打开 / 关闭
