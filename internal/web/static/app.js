@@ -522,6 +522,9 @@ function textInput(id, placeholder, value) {
 
 function openAccountForm() {
   $("#mtitle").textContent = "添加账户";
+  $("#mmeta").textContent = "";
+  // download / open / close belong to the preview; the form has its own 取消
+  $("#modal .head-actions").hidden = true;
   $("#modal").querySelector(".box").classList.add("narrow");
   const body = $("#mbody");
   body.innerHTML = "";
@@ -694,6 +697,7 @@ async function mkBucket(acct) {
 function closeModal() {
   $("#modal").hidden = true;
   $("#modal").querySelector(".box").classList.remove("narrow");
+  $("#modal .head-actions").hidden = false;
   $("#mbody").innerHTML = "";
 }
 

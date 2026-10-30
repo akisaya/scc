@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The add-account dialog no longer shows the preview's 下载 / 新标签打开 / 关闭
+  buttons or the last previewed file's size, which leaked in because both share
+  one modal. 取消, Escape and a click outside still close it.
+
 ## [0.3.0] - 2026-10-22
 
 Installing no longer requires the source tree.
