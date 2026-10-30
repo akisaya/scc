@@ -1,0 +1,19 @@
+CHANGELOG.md
+  s_93ad02791282a0::t_83bf17c0bc9bad 9-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "fa706a2e8c4d026422211cc1074110d6ad479443",
+  "prompts": {},
+  "sessions": {
+    "s_93ad02791282a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c1bb84f6-acf9-45ac-8cd3-86bc535ac72d",
+        "model": "claude-opus-5.5"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
