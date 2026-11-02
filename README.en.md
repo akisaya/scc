@@ -178,8 +178,10 @@ scc rm -r minio:/tmp/                   # delete a prefix
 - Upload via button or drag and drop with progress display, plus create folder, download, rename, delete and create/delete buckets.
 - The preview dialog shows the path, size and modification time, and provides `下载` and `新标签打开` actions.
 - Directories are paginated: 200 entries per page, and `加载更多` appends more entries while showing the number loaded so far.
-- The filter box searches only the entries that have been loaded and displays the number of matches, so a partial view is not mistaken for a complete one.
-- A separate `跳到前缀` box jumps directly to an S3 prefix on Enter, including keys that have not been loaded.
+- One search box does both jobs: typing filters the entries that have been loaded (the footer says so), and Enter treats the text as an S3 prefix and navigates there, including keys that have not been loaded.
+- Click a column header to cycle through ascending → descending → back to the default order (the key order the server returns), so a sort never traps the table. Name order matches `scc ls` (directories first, then key order within each group). Modification times are shown as `2026-11-03 01:42`, with the full stamp including seconds in the tooltip.
+- The checkbox on each row enables multi-select for batch download and batch delete; per-row actions are icon buttons that appear on hover.
+- Before an upload or a rename overwrites anything, the server is asked whether the target key exists, so a key that is not on a loaded page is not overwritten silently.
 - Every `/api/` request is logged with its status code and duration, making it easy to distinguish browser-side failures from server-side failures.
 
 > [!WARNING]
@@ -201,6 +203,7 @@ The UI is a lightweight client over these endpoints, so every UI operation can a
 | `PUT` | `/api/b/{acct}/raw/{bucket}/{key}` | Upload |
 | `DELETE` | `/api/b/{acct}/raw/{bucket}/{key}` | Delete (`?recursive=1` for a prefix) |
 | `POST` | `/api/b/{acct}/copy` | Server-side copy `{from_bucket, from_key, to_bucket, to_key}` |
+| `POST` | `/api/b/{acct}/stat` | Check which keys exist: `{bucket, keys}` → `{existing}` (up to 200) |
 
 POST requests must use `Content-Type: application/json`, which also prevents cross-site form submissions from reaching these handlers.
 
@@ -235,6 +238,7 @@ SCC_TEST_ENDPOINT=http://127.0.0.1:9000 ./test/e2e-cli.sh
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./test/e2e-web.sh
 ```
 
+The end-to-end scripts create their own buckets with a random suffix, cover both path semantics (accounts with and without a default bucket), and stop immediately with a clear message when the endpoint is unreachable.
 
 With no endpoint at hand, `test/mock/up.sh` starts a local moto and seeds demo data (the venv and moto are installed on first run):
 
@@ -246,10 +250,8 @@ scc ls mock:/ && scc web
 
 The seed data covers every preview branch (image / video / audio / PDF / text / no-preview), a 250-object directory for paging, deep prefixes, CJK and special-character keys, and a large object for `Range` requests. `--reset` drops and reseeds, `--server-only` starts the mock without data.
 
-The end-to-end scripts create their own buckets with a random suffix, cover both path semantics (accounts with and without a default bucket), and stop immediately with a clear message when the endpoint is unreachable.
-
 CI runs `gofmt`, `go vet`, `go test -race`, a syntax check of `app.js`, and both end-to-end scripts against an S3 mock (`moto`). Pushing a tag such as `v0.1.0` builds binaries for macOS, Linux and Windows, attaches them to a GitHub Release and uses the matching section of `CHANGELOG.md` as the release notes.
 
 ## Limitations
 
-Designed for single-user use. Multipart or resumable uploads, presigned share links and object versioning are not supported; the UI provides no search or sorting, and cross-account copy is not available. The UI lists one S3 page (1000 keys) at a time; the CLI has no such limit and is intended for bulk operations. Emptying an entire bucket is deliberately not a single command: delete the intended prefixes so that a single mistake cannot wipe the bucket.
+Designed for single-user use. Multipart or resumable uploads, presigned share links and object versioning are not supported, and cross-account copy is not available. Filtering in the UI only covers entries that have been loaded (use the CLI to search across directories), and batch downloads are triggered one file at a time by the browser, which may block a large batch; the CLI is intended for bulk operations. Emptying an entire bucket is deliberately not a single command: delete the intended prefixes so that a single mistake cannot wipe the bucket.

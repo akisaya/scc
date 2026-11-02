@@ -6,6 +6,71 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+The web UI sorts, selects in bulk, and asks before it overwrites something it
+could not see.
+
+### Added
+
+- Column headers sort by name, size and modification time. Name order matches
+  `scc ls`: directories first, then key order within each group. Clicking the
+  same header cycles ascending → descending → back to the default order.
+- Every row has a checkbox, so batch download and batch delete no longer need
+  one confirmation per file.
+- `POST /api/b/{acct}/stat` reports which keys already exist. An upload or a
+  rename into a partly loaded directory now warns before overwriting a key that
+  is not on screen.
+
+### Changed
+
+- The filter box and the prefix jump box are one field: typing filters what is
+  loaded, Enter navigates to the text as an S3 prefix.
+- Per-row actions became icon buttons that appear on hover; rows are 38px
+  instead of 44px; timestamps are absolute (`2026-11-03 01:42`) with the full
+  stamp in a tooltip, so rows can be compared at a glance.
+- The table uses a fixed layout, so the name column no longer caps out and
+  leaves a gap on wide screens. Breadcrumbs scroll sideways to keep the current
+  directory visible instead of cutting it off with an ellipsis.
+- On narrow screens the refresh and new-folder buttons move into an overflow
+  menu instead of disappearing.
+- Renaming, creating a folder and creating a bucket use an in-app input dialog
+  instead of the native `prompt()`, which browsers can suppress.
+
+### Fixed
+
+- The theme is applied before the first paint, so a light-mode visitor no
+  longer sees a dark frame first.
+- The add-account dialog was announced as "文件预览" to screen readers, and no
+  dialog trapped focus; both are fixed.
+- An error toast can be dismissed instead of sitting at the bottom of the
+  screen until the next message.
+- Breadcrumbs separate crumbs with a chevron instead of `/`. The first crumb is
+  `acct/bucket`, so a slash between crumbs drew the same glyph with two
+  different gaps (tight inside the crumb, spaced outside it) and read as a
+  typo. When the path overflows, the left edge fades so it no longer opens on
+  a separator with nothing in front of it.
+- Sort arrows are CSS triangles instead of `↕`/`↑`/`↓`: the glyphs are drawn
+  differently by each font and land as a slanted stroke at header size.
+- A failed bucket listing is a card in the sidebar (cause, endpoint, 重试,
+  查看错误信息) instead of the raw SDK string dropped into a 34px row, where it
+  wrapped over the account name and the 添加账户 button. A failed directory
+  listing gets the same card in the table area, so the page no longer goes
+  blank while only a toast explains why, and the account list shows 读取桶列表…
+  while the endpoint is probed. Recognised causes are named in Chinese in the
+  toast instead of leading with the SDK's English hint.
+- Opening 查看错误信息 no longer blows up the card. The card is a flex item in
+  the table panel, so its width came from its content, and the raw SDK line is
+  ~1900px on one line; the panel went with it and the card was pushed off the
+  left edge of the window, half out of view. The panel now takes the width it
+  is given and the card is sized inside it.
+- The raw error text wraps instead of scrolling sideways, so the message is not
+  cut at "operation error S3: ListBuck" with the rest hidden behind a scroll
+  gesture. The box only scrolls vertically when it is longer than the space
+  available, and its scrollbar is drawn (macOS hides overlay scrollbars until
+  a scroll starts, which is what made the cut look like truncation).
+- The table no longer blanks while the next page loads.
+- Dragging files over the window shows a drop target instead of accepting the
+  drop silently.
+
 ## [0.4.0] - 2026-11-03
 
 Bucket paths now mark bucket names with `//`.

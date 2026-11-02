@@ -1,11 +1,23 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <title>scc</title>
 <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+<script>
+/* Set the theme before the first paint. Doing it in app.js means a light-mode
+   visitor sees a dark frame while the script at the end of the body loads. */
+(function () {
+  var t = null;
+  try { t = localStorage.getItem("scc-theme"); } catch (e) { /* private mode */ }
+  if (!t) {
+    t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  document.documentElement.dataset.theme = t;
+})();
+</script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -24,21 +36,52 @@
 
 <main>
   <header>
-    <nav id="crumbs"></nav>
-    <input id="jumpprefix" class="filter jump" type="text" placeholder="跳到前缀，回车"
-           title="按 S3 前缀直接跳转，不受已加载页数限制"
-           aria-label="按前缀跳转" autocomplete="off" spellcheck="false">
-    <input id="filter" class="filter" type="search" placeholder="过滤已加载项" aria-label="过滤已加载项" autocomplete="off">
+    <nav id="crumbs" aria-label="当前位置"></nav>
+    <div class="search">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4.5 4.5"/></svg>
+      <input id="q" type="search" placeholder="过滤 · 回车跳转前缀"
+             title="输入即过滤已加载的项；按回车把这个前缀当作目录跳过去，不受已加载页数限制"
+             aria-label="过滤已加载项；回车按前缀跳转" autocomplete="off" spellcheck="false">
+      <button id="qclear" class="icon-btn clear" type="button" title="清除" aria-label="清除过滤" hidden>×</button>
+    </div>
     <div class="tools">
-      <button id="refresh" class="ghost" title="刷新">刷新</button>
-      <button id="newfolder" class="ghost" title="在当前目录新建文件夹">新建文件夹</button>
+      <button id="refresh" class="icon-btn" title="刷新" aria-label="刷新">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4.5V10h-5.5"/></svg>
+      </button>
+      <button id="newfolder" class="ghost" title="在当前目录新建文件夹" type="button">新建文件夹</button>
+      <button id="more" class="icon-btn narrow-only" type="button" title="更多操作"
+              aria-label="更多操作" aria-haspopup="menu" aria-expanded="false">⋯</button>
+      <div id="moremenu" class="menu" role="menu" aria-label="更多操作" hidden>
+        <button type="button" role="menuitem" data-act="refresh">刷新</button>
+        <button type="button" role="menuitem" data-act="newfolder">新建文件夹</button>
+      </div>
       <label class="btn btn-primary">上传<input id="upload" type="file" multiple hidden></label>
     </div>
   </header>
 
+  <div id="selbar" hidden>
+    <span id="selcount" aria-live="polite"></span>
+    <div class="sel-actions">
+      <button id="seldownload" class="ghost" type="button">下载</button>
+      <button id="seldelete" class="ghost danger" type="button">删除</button>
+      <button id="selclear" class="ghost" type="button">取消选择</button>
+    </div>
+  </div>
+
   <div class="table-wrap">
     <table>
-      <thead><tr><th>名称</th><th class="num">大小</th><th class="date">修改时间</th><th></th></tr></thead>
+      <colgroup>
+        <col class="c-check"><col class="c-name"><col class="c-size"><col class="c-date"><col class="c-act">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="check"><input id="checkall" type="checkbox" aria-label="全选当前列出的项"></th>
+          <th><button class="sort" type="button" data-col="name">名称<i class="arrow" aria-hidden="true"></i></button></th>
+          <th class="num"><button class="sort" type="button" data-col="size">大小<i class="arrow" aria-hidden="true"></i></button></th>
+          <th class="date"><button class="sort" type="button" data-col="date">修改时间<i class="arrow" aria-hidden="true"></i></button></th>
+          <th class="act"><span class="sr-only">操作</span></th>
+        </tr>
+      </thead>
       <tbody id="rows"></tbody>
     </table>
     <div id="empty" class="hint" hidden></div>
@@ -46,7 +89,7 @@
   <div id="progress"></div>
 </main>
 
-<div id="modal" hidden role="dialog" aria-modal="true" aria-label="文件预览">
+<div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mtitle">
   <div class="box">
     <div class="head">
       <div class="title">
@@ -56,7 +99,7 @@
       <div class="head-actions">
         <a id="mdownload" class="btn btn-primary">下载</a>
         <a id="mopen" class="btn ghost" target="_blank" rel="noopener">新标签打开</a>
-        <button id="mclose" class="ghost">关闭</button>
+        <button id="mclose" class="ghost" type="button">关闭</button>
       </div>
     </div>
     <div id="mbody"></div>
@@ -72,6 +115,26 @@
     </div>
   </div>
 </div>
+
+<div id="ask" hidden role="dialog" aria-modal="true" aria-labelledby="asktitle">
+  <form class="box" id="askform">
+    <p id="asktitle" class="ask-title"></p>
+    <input id="askinput" type="text" autocomplete="off" spellcheck="false">
+    <p id="askerr" class="ask-err" role="alert"></p>
+    <div class="actions">
+      <button id="askcancel" class="ghost" type="button">取消</button>
+      <button id="askok" class="btn-primary" type="submit">确定</button>
+    </div>
+  </form>
+</div>
+
+<div id="dropzone" hidden aria-hidden="true">
+  <div class="dz">
+    <strong>松开即上传</strong>
+    <span id="dzprefix"></span>
+  </div>
+</div>
+
 <script src="/static/app.js"></script>
 </body>
 </html>

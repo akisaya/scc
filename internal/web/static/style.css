@@ -17,6 +17,9 @@
   --surface-3: #363d49;
   --border: #333a45;
   --border-strong: #46505f;
+  /* breadcrumb slashes: quieter than the crumbs they sit between, but still a
+     visible glyph — --border-strong all but disappears on this background */
+  --sep: #66707f;
   --text: #e6eaf1;
   --muted: #9ea8b7;
   --accent: #78abff;
@@ -34,6 +37,7 @@
   --surface-3: #e7ecf3;
   --border: #e4e9f0;
   --border-strong: #cbd4e1;
+  --sep: #a3aec0;
   --text: #131922;
   --muted: #657085;
   --accent: #2563eb;
@@ -48,6 +52,7 @@
 body {
   margin: 0;
   height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: 250px 1fr;
   overflow: hidden;
@@ -67,6 +72,20 @@ body {
   border: 2px solid transparent;
   background-clip: content-box;
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* button/.btn set display, which would otherwise beat the UA rule for [hidden] */
+[hidden] { display: none !important; }
 
 /* ---------- controls ---------- */
 button, .btn {
@@ -103,6 +122,7 @@ button:disabled { opacity: .45; cursor: default; }
 
 .ghost { background: transparent; border-color: transparent; color: var(--muted); }
 .ghost:hover { background: var(--surface-2); border-color: transparent; color: var(--text); }
+.ghost.danger:hover { color: var(--danger); background: var(--accent-soft); }
 
 .icon-btn {
   width: 30px;
@@ -125,6 +145,15 @@ button:disabled { opacity: .45; cursor: default; }
   stroke-linejoin: round;
 }
 [data-theme="dark"] .moon, [data-theme="light"] .sun { display: none; }
+
+input[type=checkbox] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  vertical-align: middle;
+}
 
 /* ---------- sidebar ---------- */
 aside {
@@ -175,12 +204,14 @@ aside {
   display: flex;
   align-items: center;
   gap: 9px;
+  min-width: 0;
   height: 34px;
   padding: 0 8px;
   border-radius: var(--radius-sm);
   font-size: 13.5px;
   color: var(--text);
   cursor: pointer;
+  overflow: hidden;
   transition: background .13s ease, color .13s ease;
 }
 .bucket:hover { background: var(--surface-2); }
@@ -198,6 +229,98 @@ aside {
 }
 .bucket:hover .del, .bucket .del:focus-visible { opacity: 1; }
 .bucket .del:hover { background: transparent; color: var(--danger); }
+
+/* ---------- error card (sidebar list + table area) ---------- */
+.acct-note { padding: 2px 8px 6px; color: var(--muted); font-size: 12px; }
+
+.err-card {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in oklab, var(--danger) 28%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--danger) 6%, var(--surface));
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: left;
+  overflow-wrap: anywhere;
+  /* the card is a flex item in the table panel: without this its automatic
+     minimum size is the width of the un-wrapped SDK line */
+  min-width: 0;
+}
+#accounts .err-card { margin: 2px 0 4px; }
+.err-card .head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--danger);
+  font-weight: 500;
+}
+.err-card .head .ico { width: 14px; height: 14px; margin-top: 2px; }
+.err-card .sub {
+  margin: 4px 0 0 20px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.err-card .acts { margin: 8px 0 0 20px; }
+.err-card .acts button { height: 24px; padding: 0 10px; font-size: 11.5px; }
+.err-card details { margin: 8px 0 0 20px; }
+.err-card summary {
+  color: var(--muted);
+  font-size: 11.5px;
+  cursor: pointer;
+  list-style: none;
+}
+.err-card summary::-webkit-details-marker { display: none; }
+.err-card summary::before { content: "▸ "; }
+.err-card details[open] summary::before { content: "▾ "; }
+.err-card pre {
+  margin: 6px 0 0;
+  padding: 7px 8px;
+  max-height: 260px;
+  overflow: auto;
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font: 10.5px/1.55 var(--mono);
+  /* The raw SDK text is one very long line. It wraps: a horizontally scrolled
+     box shows "operation error S3: ListBuck" and nothing says the rest is one
+     swipe away. Words only break when one cannot fit, so the URLs are the only
+     thing that lands mid-token. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* macOS hides overlay scrollbars until a scroll starts, so a box that does
+   overflow looks like text that was simply cut off. Styling the scrollbar is
+   what makes Chrome draw a real one. */
+.err-card pre::-webkit-scrollbar { width: 8px; height: 8px; }
+.err-card pre::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--border-strong);
+  background-clip: padding-box;
+}
+.err-card pre::-webkit-scrollbar-track { background: transparent; }
+/* the sidebar is its own scroll container, so the card there shows the whole
+   message instead of a fixed window onto it */
+#accounts .err-card pre { max-height: none; }
+
+/* A failed listing: no half-empty table, just the card, centred in the panel.
+   #empty is the flex item here, and a flex item with width:auto is sized to its
+   max-content width - which, once 查看错误信息 is open, is the length of the raw
+   SDK line on one line (1900px). That pushed the card off the left edge of the
+   window. flex:1 plus min-width:0 gives it the panel width and nothing more;
+   the card is sized inside it, so the raw text scrolls instead of the panel. */
+.table-wrap.failed { display: flex; }
+.table-wrap.failed table { display: none; }
+#empty.load-error {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+}
+#empty.load-error .err-card { width: min(460px, 100%); }
 
 .add-account {
   margin-top: 12px;
@@ -240,9 +363,13 @@ aside {
 main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 
 header {
+  position: relative;
+  /* the overflow menu hangs out of the header; without its own z-index the
+     sticky table header (z-index 1) would paint over the open menu */
+  z-index: 5;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   flex: none;
   padding: 12px 18px;
   border-bottom: 1px solid var(--border);
@@ -251,9 +378,35 @@ header {
   backdrop-filter: blur(10px);
 }
 
-nav { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13.5px; }
+/* The tail of the path matters most, so the crumbs scroll sideways instead of
+   clipping with an ellipsis (an ellipsis cuts the current directory, not the root). */
+nav {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  font-size: 13.5px;
+  scrollbar-width: none;
+}
+nav::-webkit-scrollbar { display: none; }
+/* Scrolled to the tail, the leftmost visible glyph is a separator with no crumb
+   before it, which reads as a broken chevron. Fading that edge says "there is
+   more to the left" and the orphan never stands alone. */
+nav.fade-left {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18px);
+  mask-image: linear-gradient(90deg, transparent, #000 18px);
+}
+/* The first crumb is `acct/bucket`, so a slash between crumbs draws the same
+   glyph with two different gaps: tight inside the crumb, spaced outside it, and
+   the eye reads that as a typo. The separator is a chevron instead - a different
+   glyph for a different job, so there is nothing left to compare. It is drawn
+   with borders rather than ">" so it does not depend on the font's metrics. */
 nav a {
-  padding: 3px 5px;
+  flex: none;
+  padding: 3px 4px;
   border-radius: 6px;
   color: var(--muted);
   text-decoration: none;
@@ -262,26 +415,96 @@ nav a {
 }
 nav a:hover { background: var(--surface-2); color: var(--text); }
 nav a.cur { color: var(--text); font-weight: 500; }
-nav .sep { margin: 0 1px; color: var(--border-strong); }
-
-.tools { display: flex; gap: 8px; }
-.filter {
+nav .sep {
   flex: none;
-  width: 180px;
+  width: 5px;
+  height: 5px;
+  margin: 0 2px;
+  border-top: 1.5px solid var(--sep);
+  border-right: 1.5px solid var(--sep);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+
+.tools { position: relative; display: flex; align-items: center; gap: 6px; flex: none; }
+
+/* one box that both filters what is loaded and (on Enter) jumps to a prefix */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  width: 250px;
   height: 32px;
-  padding: 0 10px;
+  padding: 0 8px 0 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.search:focus-within { border-color: var(--accent); box-shadow: var(--ring); }
+.search .ico { color: var(--muted); }
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--text);
   font: inherit;
   font-size: 13px;
-  transition: border-color .15s ease, box-shadow .15s ease;
 }
-.filter::placeholder { color: var(--muted); }
-.filter:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
-.filter.jump { width: 210px; }
+.search input:focus { outline: none; box-shadow: none; }
+.search input::placeholder { color: var(--muted); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search .clear { width: 22px; height: 22px; font-size: 15px; }
 
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 15;
+  min-width: 152px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  gap: 2px;
+}
+.menu[hidden] { display: none; }
+.menu button {
+  justify-content: flex-start;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+}
+.menu button:hover { background: var(--surface-2); }
+
+/* visible on narrow screens only; the two buttons it replaces are hidden there */
+.narrow-only { display: none; }
+
+/* ---------- selection bar ---------- */
+#selbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  padding: 6px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-soft);
+  font-size: 13px;
+  color: var(--text);
+}
+#selbar[hidden] { display: none; }
+#selbar .sel-actions { margin-left: auto; display: flex; gap: 6px; }
+#selbar button { height: 28px; font-size: 12.5px; }
+
+/* ---------- table ---------- */
 /* the "load more" row and the loaded-count footer */
 tbody tr.more:hover td { background: transparent; }
 td.more-cell { padding: 12px 18px; color: var(--muted); font-size: 12.5px; }
@@ -289,13 +512,22 @@ td.more-cell .more-info { margin-right: 10px; }
 td.more-cell button { height: 28px; font-size: 12.5px; }
 
 .table-wrap { flex: 1; min-height: 0; overflow: auto; }
+/* dimmed while the next page loads; the old rows stay so the list never blanks */
+.table-wrap.busy table { opacity: .5; transition: opacity .15s ease; }
 
-table { width: 100%; border-collapse: collapse; }
+/* fixed layout keeps the action column pinned to the right on wide screens
+   instead of letting the name column cap out and leave a gap */
+table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+col.c-check { width: 42px; }
+col.c-size { width: 96px; }
+col.c-date { width: 150px; }
+col.c-act { width: 112px; }
+
 thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 10px 18px;
+  padding: 9px 18px 9px 0;
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   font-size: 11px;
@@ -305,23 +537,98 @@ thead th {
   text-align: left;
   color: var(--muted);
 }
-tbody td { height: 44px; padding: 0 18px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+thead th:first-child, tbody td:first-child { padding-left: 18px; }
+thead th.check, tbody td.check { padding-right: 0; text-align: center; }
+thead th.num, tbody td.num { text-align: right; }
+thead th.act, tbody td.act { text-align: right; padding-right: 18px; }
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.sort:hover { background: none; color: var(--text); }
+/* The ↕/↑/↓ glyphs are drawn differently by every font and land as a slanted
+   stroke at 10px. Two CSS triangles keep the same width in all three states and
+   are always vertical. */
+.sort .arrow {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 1px;
+}
+.sort .arrow::before,
+.sort .arrow::after {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  opacity: .28;
+}
+.sort .arrow::before { border-bottom: 4px solid currentColor; }
+.sort .arrow::after { border-top: 4px solid currentColor; }
+.sort:hover .arrow::before, .sort:hover .arrow::after { opacity: .55; }
+.sort.on { color: var(--text); }
+.sort.on .arrow::before { opacity: 1; color: var(--accent); }
+.sort.on:not(.desc) .arrow::after { opacity: .14; }
+.sort.on.desc .arrow::before { opacity: .14; }
+.sort.on.desc .arrow::after { opacity: 1; color: var(--accent); }
+
+tbody td {
+  height: 38px;
+  padding: 0 18px 0 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+tbody td:first-child { padding-left: 18px; }
 tbody tr { transition: background .12s ease; }
 tbody tr:hover td { background: var(--surface-2); }
+tbody tr.sel td { background: var(--accent-soft); }
 
-td.name { max-width: 560px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-td.name .ico { margin-right: 9px; vertical-align: -3px; }
+td.name { cursor: pointer; }
+td.name .ico { margin-right: 9px; vertical-align: -3px; color: var(--muted); }
 tbody tr:hover td.name .ico { color: var(--accent); }
-td.num, th.num { text-align: right; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
-td.date, th.date { white-space: nowrap; color: var(--muted); }
-td.act { text-align: right; white-space: nowrap; }
 
-td.act button { height: 26px; padding: 0 8px; font-size: 12px; opacity: 0; transition: opacity .12s ease; }
-tbody tr:hover td.act button, td.act button:focus-visible { opacity: 1; }
+td.num, th.num { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+td.date, th.date { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+td.act { white-space: nowrap; }
+
+.row-act {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0;
+  vertical-align: middle;
+  transition: opacity .12s ease, color .12s ease, background .12s ease;
+}
+.row-act + .row-act { margin-left: 2px; }
+.row-act:hover { background: var(--surface-3); color: var(--text); }
+.row-act.danger:hover { color: var(--danger); }
+tbody tr:hover .row-act, .row-act:focus-visible { opacity: 1; }
 
 td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
 
 .hint { padding: 48px 18px; text-align: center; color: var(--muted); font-size: 13.5px; }
+.empty-accounts { padding: 10px 6px 4px; text-align: left; font-size: 12.5px; line-height: 1.6; }
 
 /* ---------- toast ---------- */
 #progress {
@@ -332,7 +639,7 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
   width: max-content;
   min-width: 240px;
   max-width: min(560px, 84vw);
-  padding: 11px 14px;
+  padding: 11px 38px 11px 14px;
   transform: translateX(-50%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -344,12 +651,25 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
 #progress .bar { height: 4px; margin-bottom: 7px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
 #progress .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s ease; }
 #progress .lab { color: var(--muted); }
+.toast-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+}
+.toast-close:hover { background: var(--surface-2); color: var(--text); }
 
-/* ---------- destructive confirm ---------- */
+/* ---------- dialogs ---------- */
 .btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-danger); font-weight: 500; }
 .btn-danger:hover { background: var(--danger); border-color: var(--danger); filter: brightness(1.06); }
 
-#confirm {
+#confirm, #ask {
   position: fixed;
   inset: 0;
   z-index: 40;
@@ -359,8 +679,8 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
   background: rgb(0 0 0 / .5);
   backdrop-filter: blur(4px);
 }
-#confirm[hidden] { display: none; }
-#confirm .box {
+#confirm[hidden], #ask[hidden] { display: none; }
+#confirm .box, #ask .box {
   width: min(420px, 100%);
   padding: 20px;
   border: 1px solid var(--border);
@@ -369,7 +689,23 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
   box-shadow: var(--shadow-lg);
 }
 #confirm p { margin: 0 0 18px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
-#confirm .actions { display: flex; justify-content: flex-end; gap: 8px; }
+#confirm .actions, #ask .actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+#ask .ask-title { margin: 0 0 12px; font-size: 13.5px; font-weight: 500; }
+#ask #askinput {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+}
+#ask #askinput:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+#ask .ask-err { margin: 8px 0 0; min-height: 1.2em; color: var(--danger); font-size: 12.5px; }
+#ask .actions { margin-top: 4px; }
 
 /* ---------- preview ---------- */
 #modal {
@@ -435,18 +771,53 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
 #mbody .no-preview .meta { font-size: 12px; color: var(--muted); }
 #mbody .err { color: var(--danger); font-size: 13px; }
 
-@media (max-width: 760px) {
+/* ---------- drop target ---------- */
+#dropzone {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / .45);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+#dropzone[hidden] { display: none; }
+#dropzone .dz {
+  display: grid;
+  gap: 6px;
+  padding: 24px 34px;
+  border: 2px dashed var(--accent);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+#dropzone strong { font-size: 15px; font-weight: 600; }
+#dropzone span { color: var(--muted); font: 12px/1.5 var(--mono); }
+
+@media (max-width: 860px) {
   body { grid-template-columns: 172px 1fr; }
   aside { padding: 10px 8px; }
   header { padding: 10px; gap: 8px; }
-  thead th, tbody td { padding-left: 10px; padding-right: 10px; }
+  thead th, tbody td { padding-left: 10px; }
+  thead th:first-child, tbody td:first-child { padding-left: 10px; }
+  thead th.act, tbody td.act { padding-right: 10px; }
+  .search { width: 168px; }
+  .search input { font-size: 12.5px; }
+  #newfolder, #refresh { display: none; }
+  .narrow-only { display: inline-flex; }
+  col.c-date { width: 0; }
   td.date, th.date { display: none; }
-  .tools .ghost { display: none; }
-  .filter { width: 120px; }
-  .filter.jump { display: none; }
+  col.c-act { width: 92px; }
 }
 
-/* no hover: keep per-row actions and the bucket delete always visible */
+@media (max-width: 560px) {
+  .search { width: 120px; }
+  #selbar { padding: 6px 10px; }
+}
+
+/* no hover: keep per-row actions, bucket delete and the account ＋ always visible */
 @media (hover: none) {
-  td.act button, .bucket .del, .acct-add { opacity: 1; }
+  .row-act, .bucket .del, .acct-add { opacity: 1; }
 }
