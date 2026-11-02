@@ -9,7 +9,7 @@
   [![单文件部署](https://img.shields.io/badge/%E9%83%A8%E7%BD%B2-%E5%8D%95%E4%B8%AA%E4%BA%8C%E8%BF%9B%E5%88%B6-2ea043?style=flat-square)](#%E5%AE%89%E8%A3%85)
   [![无数据库](https://img.shields.io/badge/%E7%8A%B6%E6%80%81-%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-6b7280?style=flat-square)](#%E9%85%8D%E7%BD%AE)
 
-  [功能](#功能) • [安装](#安装) • [快速开始](#快速开始) • [命令行](#命令行) • [路径语法](#路径语法) • [网页界面](#网页界面) • [配置](#配置) • [开发](#开发)
+  [功能](#功能) • [安装](#安装) • [快速开始](#快速开始) • [路径语法](#路径语法) • [命令行](#命令行) • [网页界面](#网页界面) • [配置](#配置) • [开发](#开发)
 
   **中文** | [English](README.en.md)
 </div>
@@ -40,14 +40,14 @@ go build .                              # 构建产物为 ./scc
 
 **未安装 Go：** 从 [Releases](https://github.com/akisaya/scc/releases) 下载对应平台的预编译包（macOS / Linux / Windows，含 arm64），解压后将 `scc` 放入 `PATH`。
 
-**已安装 [Go 1.24+](https://go.dev/dl/)：** 无需克隆仓库。
+**已安装 [Go 1.24+](https://go.dev/dl/)：**
 
 ```bash
 go install github.com/akisaya/scc@latest
 # -> $(go env GOPATH)/bin/scc   (Windows: %USERPROFILE%\go\bin)
 ```
 
-仅在需要修改代码时克隆仓库。仓库无需构建步骤，不依赖 npm，也不包含生成代码。
+或者从 source 构建
 
 ```bash
 git clone https://github.com/akisaya/scc && cd scc
@@ -78,7 +78,48 @@ scc accounts list     # 不会输出 secret
 scc ls minio:         # 默认桶根目录
 ```
 
-对象路径格式为 `minio://data/reports/q3.pdf`，其中 `//` 后为桶名；`minio:` 表示默认桶根目录。账号名需满足以下规则：仅可包含字母、数字、`-`、`_`、`.`，且最长 64 个字符，因为账号名会出现在路径和 URL 中。
+## 路径语法
+
+三种写法，`//` 始终表示桶名：
+
+| 路径 | 含义 |
+| --- | --- |
+| `acct:` | 账号默认桶的根目录（未设置默认桶时列出桶） |
+| `acct:/dir/file` | 默认桶内的路径；未设置默认桶时为错误 |
+| `acct://bucket/key` | 显式指定的桶，始终不受默认桶影响 |
+
+## 配置
+通过 account 命令添加的账号实际存储在一个 yaml 配置文件中，如下所示。也可以直接修改配置文件添加账号
+
+```yaml
+listen: 127.0.0.1:8080
+token: ""
+accounts:
+    - name: minio
+      endpoint: http://127.0.0.1:9000
+      region: us-east-1
+      access_key: minioadmin
+      secret_key: minioadmin
+      path_style: true
+      default_bucket: data
+    - name: r2
+      endpoint: https://<account-id>.r2.cloudflarestorage.com
+      region: auto
+      access_key: env:R2_ACCESS_KEY
+      secret_key: env:R2_SECRET_KEY
+      path_style: true
+```
+
+配置文件优先级如下，取第一个存在的文件：
+
+1. `$SCC_CONFIG`（完整文件路径）
+2. `$XDG_CONFIG_HOME/scc/config.yaml`
+3. `~/.config/scc/config.yaml` —— macOS 和 Linux 一致
+
+`scc accounts list` 会输出当前实际使用的路径。任何字符串值均可写成 `env:NAME`，在使用时从环境变量读取。
+
+> [!NOTE]
+> 没有数据库，也没有常驻服务：配置文件是唯一的状态来源。`accounts add` 和网页表单修改的是同一个文件，CLI 与界面读取的也是同一个文件，因此不会出现状态不一致。
 
 ## 命令行
 
@@ -120,19 +161,6 @@ scc rm -r minio:/tmp/                   # 删除一个前缀
 > [!TIP]
 > 在终端中，`ls` 最多输出 100 条，并提示结果已截断；`-n 0` 可输出全部。通过管道或重定向输出时不会截断，脚本行为不受影响。选项也可写在路径之后，例如 `scc ls minio:/reports -n 20`。
 
-## 路径语法
-
-三种写法，`//` 始终表示桶名：
-
-| 路径 | 含义 |
-| --- | --- |
-| `acct:` | 账号默认桶的根目录（未设置默认桶时列出桶） |
-| `acct:/dir/file` | 默认桶内的路径；未设置默认桶时为错误 |
-| `acct://bucket/key` | 显式指定的桶，始终不受默认桶影响 |
-
-> [!NOTE]
-> `//` 是桶名标记：`acct:/reports/` 始终是默认桶内的目录，不会因为存在名为 `reports` 的桶而改变含义。要设置或更换默认桶，使用 `scc use acct://bucket`；要访问其他桶，使用双斜杠形式，例如 `scc cp acct:/a.txt acct://archive/a.txt`。
-
 `mb`、`rb` 和 `use` 始终要求使用 `acct://bucket` 形式，因此桶名不会被“默认桶”重定向。
 
 ## 网页界面
@@ -155,40 +183,6 @@ scc rm -r minio:/tmp/                   # 删除一个前缀
 
 > [!WARNING]
 > 该服务持有 S3 凭证，因此默认仅绑定回环地址。如需在其他网络接口上暴露，请先在配置中设置 `token`：此后访问界面需先通过 `?token=...` 完成一次认证（会写入 cookie），或使用 `Authorization: Bearer <token>`。服务不提供按用户划分的权限控制，token 仅作为共享密钥使用。
-
-## 配置
-
-配置文件为纯 YAML，权限为 `0600`：
-
-```yaml
-listen: 127.0.0.1:8080
-token: ""
-accounts:
-    - name: minio
-      endpoint: http://127.0.0.1:9000
-      region: us-east-1
-      access_key: minioadmin
-      secret_key: minioadmin
-      path_style: true
-      default_bucket: data
-    - name: r2
-      endpoint: https://<account-id>.r2.cloudflarestorage.com
-      region: auto
-      access_key: env:R2_ACCESS_KEY
-      secret_key: env:R2_SECRET_KEY
-      path_style: true
-```
-
-文件位置按以下顺序查找，取第一个存在的文件：
-
-1. `$SCC_CONFIG`（完整文件路径）
-2. `$XDG_CONFIG_HOME/scc/config.yaml`
-3. `~/.config/scc/config.yaml` —— macOS 和 Linux 一致
-
-`scc accounts list` 会输出当前实际使用的路径。任何字符串值均可写成 `env:NAME`，在使用时从环境变量读取。
-
-> [!NOTE]
-> 没有数据库，也没有常驻服务：配置文件是唯一的状态来源。`accounts add` 和网页表单修改的是同一个文件，CLI 与界面读取的也是同一个文件，因此不会出现状态不一致。
 
 ## Web API
 

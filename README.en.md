@@ -9,7 +9,7 @@
   [![Single binary](https://img.shields.io/badge/deploy-single%20binary-2ea043?style=flat-square)](#installation)
   [![No database](https://img.shields.io/badge/state-config%20file-6b7280?style=flat-square)](#configuration)
 
-  [Features](#features) • [Installation](#installation) • [Getting started](#getting-started) • [Command line](#command-line) • [Path syntax](#path-syntax) • [Web UI](#web-ui) • [Configuration](#configuration) • [Development](#development)
+  [Features](#features) • [Installation](#installation) • [Getting started](#getting-started) • [Path syntax](#path-syntax) • [Command line](#command-line) • [Web UI](#web-ui) • [Configuration](#configuration) • [Development](#development)
 
   [中文](README.md) | **English**
 </div>
@@ -40,14 +40,14 @@ go build .                              # builds ./scc
 
 **Without Go:** Download a prebuilt binary from [Releases](https://github.com/akisaya/scc/releases) — macOS, Linux and Windows, arm64 included — and add `scc` to your `PATH`.
 
-**With [Go 1.24+](https://go.dev/dl/):** cloning is not required.
+**With [Go 1.24+](https://go.dev/dl/):**
 
 ```bash
 go install github.com/akisaya/scc@latest
 # -> $(go env GOPATH)/bin/scc   (Windows: %USERPROFILE%\go\bin)
 ```
 
-Clone the repository only if you need to modify the code. There is no build step, no npm dependency and no generated code.
+Or build from source:
 
 ```bash
 git clone https://github.com/akisaya/scc && cd scc
@@ -78,7 +78,49 @@ scc accounts list     # secrets are not printed
 scc ls minio:         # default bucket root
 ```
 
-Object paths use the form `minio://data/reports/q3.pdf`, where the segment after `//` is the bucket name; `minio:` refers to the default bucket root. Account names must contain only letters, digits, `-`, `_` and `.`, with a maximum length of 64 characters, because they appear in paths and URLs.
+## Path syntax
+
+Three forms; `//` always marks a bucket:
+
+| Path | Meaning |
+| --- | --- |
+| `acct:` | Root of the account's default bucket (lists buckets when unset) |
+| `acct:/dir/file` | Path inside the default bucket; an error when no default is configured |
+| `acct://bucket/key` | That bucket, always, regardless of the default |
+
+## Configuration
+
+Accounts added with the `accounts` command are in fact stored in a YAML configuration file, shown below. You can also edit that file directly to add an account.
+
+```yaml
+listen: 127.0.0.1:8080
+token: ""
+accounts:
+    - name: minio
+      endpoint: http://127.0.0.1:9000
+      region: us-east-1
+      access_key: minioadmin
+      secret_key: minioadmin
+      path_style: true
+      default_bucket: data
+    - name: r2
+      endpoint: https://<account-id>.r2.cloudflarestorage.com
+      region: auto
+      access_key: env:R2_ACCESS_KEY
+      secret_key: env:R2_SECRET_KEY
+      path_style: true
+```
+
+Configuration files are resolved in the following order, using the first one that exists:
+
+1. `$SCC_CONFIG` (a full file path)
+2. `$XDG_CONFIG_HOME/scc/config.yaml`
+3. `~/.config/scc/config.yaml` — the same on macOS and Linux
+
+`scc accounts list` prints the path currently in use. Any string value may be written as `env:NAME` and is resolved from the environment when used.
+
+> [!NOTE]
+> There is no database and no daemon: the configuration file is the only source of state. `accounts add` and the web form modify the same file, and the CLI and UI read the same file, so they cannot become inconsistent.
 
 ## Command line
 
@@ -120,19 +162,6 @@ scc rm -r minio:/tmp/                   # delete a prefix
 > [!TIP]
 > On a terminal, `ls` prints at most 100 entries and indicates that the output was truncated; `-n 0` prints everything. Output is never capped when piped or redirected, so scripts always receive the full listing. Flags may also follow the path, for example `scc ls minio:/reports -n 20`.
 
-## Path syntax
-
-Three forms; `//` always marks a bucket:
-
-| Path | Meaning |
-| --- | --- |
-| `acct:` | Root of the account's default bucket (lists buckets when unset) |
-| `acct:/dir/file` | Path inside the default bucket; an error when no default is configured |
-| `acct://bucket/key` | That bucket, always, regardless of the default |
-
-> [!NOTE]
-> The double slash is the bucket marker: `acct:/reports/` is always a folder in the default bucket and is never reinterpreted as a bucket named `reports`. Set or change the default bucket with `scc use acct://bucket`; use the double-slash form for other buckets, for example `scc cp acct:/a.txt acct://archive/a.txt`.
-
 `mb`, `rb` and `use` always require `acct://bucket`, so a bucket name is never redirected by the default bucket.
 
 ## Web UI
@@ -155,40 +184,6 @@ Three forms; `//` always marks a bucket:
 
 > [!WARNING]
 > The server holds your S3 credentials, so it binds to loopback by default. To expose it on another network interface, set `token` in the configuration first: the UI then requires `?token=...` once (a cookie is set), or `Authorization: Bearer <token>`. There is no per-user access control; the token is a single shared secret.
-
-## Configuration
-
-The configuration file is plain YAML and is written with mode `0600`:
-
-```yaml
-listen: 127.0.0.1:8080
-token: ""
-accounts:
-    - name: minio
-      endpoint: http://127.0.0.1:9000
-      region: us-east-1
-      access_key: minioadmin
-      secret_key: minioadmin
-      path_style: true
-      default_bucket: data
-    - name: r2
-      endpoint: https://<account-id>.r2.cloudflarestorage.com
-      region: auto
-      access_key: env:R2_ACCESS_KEY
-      secret_key: env:R2_SECRET_KEY
-      path_style: true
-```
-
-The configuration file is resolved in the following order:
-
-1. `$SCC_CONFIG` (a full file path)
-2. `$XDG_CONFIG_HOME/scc/config.yaml`
-3. `~/.config/scc/config.yaml` — the same on macOS and Linux
-
-`scc accounts list` prints the path currently in use. Any string value may be written as `env:NAME` and is resolved from the environment when used.
-
-> [!NOTE]
-> There is no database and no daemon: the configuration file is the only source of state. `accounts add` and the web form modify the same file, and the CLI and UI read the same file, so they cannot become inconsistent.
 
 ## Web API
 
