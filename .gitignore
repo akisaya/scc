@@ -1,2 +1,7 @@
 /scc
 config.yaml
+
+# 本地 S3 mock：venv 与运行时数据都不入库
+test/mock/.venv/
+test/mock/.work/
+__pycache__/

@@ -222,7 +222,7 @@ internal/s3x/            AWS SDK 客户端、列目录/读写/拷贝/删除、�
 internal/web/            HTTP API、请求日志、内嵌界面
 internal/web/static/     index.html、app.js、style.css（无构建步骤）
 scripts/                 release-notes.sh：把 CHANGELOG 段落转成 Release 正文
-test/                    针对真实 endpoint 的端到端脚本
+test/                    针对真实 endpoint 的端到端脚本；test/mock/ 是本地 mock 与演示数据
 ```
 
 ```bash
@@ -233,6 +233,17 @@ go vet ./...
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 ./test/e2e-cli.sh
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./test/e2e-web.sh
 ```
+
+
+没有现成 endpoint 时，`test/mock/up.sh` 会起一个本地 moto 并灌好演示数据（首次运行自动创建 venv 并安装 moto）：
+
+```bash
+./test/mock/up.sh                                  # http://127.0.0.1:19000，凭证 testkey / testsecret123
+export SCC_CONFIG=$PWD/test/mock/.work/config.yaml # 演示专用配置，不碰 ~/.config/scc
+scc ls mock:/ && scc web
+```
+
+演示数据覆盖图片 / 视频 / 音频 / PDF / 文本 / 无预览类型的预览分支、250 个对象的分页、深层目录、中文与特殊字符 key，以及用于 Range 测试的大文件。`--reset` 丢弃后重灌，`--server-only` 只起服务。
 
 端到端脚本会自动创建带随机后缀的桶，覆盖两种路径语义（有默认桶和无默认桶的账号），并在 endpoint 不可达时立即给出明确提示。
 

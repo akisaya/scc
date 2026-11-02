@@ -223,7 +223,7 @@ internal/s3x/            AWS SDK client, listing/get/put/copy/delete, error hint
 internal/web/            HTTP API, request logging, embedded UI
 internal/web/static/     index.html, app.js, style.css (no build step)
 scripts/                 release-notes.sh: CHANGELOG section -> GitHub Release body
-test/                    end-to-end scripts against a real endpoint
+test/                    end-to-end scripts against a real endpoint; test/mock/ is the local mock and seed data
 ```
 
 ```bash
@@ -234,6 +234,17 @@ go vet ./...
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 ./test/e2e-cli.sh
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./test/e2e-web.sh
 ```
+
+
+With no endpoint at hand, `test/mock/up.sh` starts a local moto and seeds demo data (the venv and moto are installed on first run):
+
+```bash
+./test/mock/up.sh                                  # http://127.0.0.1:19000, keys testkey / testsecret123
+export SCC_CONFIG=$PWD/test/mock/.work/config.yaml # demo-only config, leaves ~/.config/scc alone
+scc ls mock:/ && scc web
+```
+
+The seed data covers every preview branch (image / video / audio / PDF / text / no-preview), a 250-object directory for paging, deep prefixes, CJK and special-character keys, and a large object for `Range` requests. `--reset` drops and reseeds, `--server-only` starts the mock without data.
 
 The end-to-end scripts create their own buckets with a random suffix, cover both path semantics (accounts with and without a default bucket), and stop immediately with a clear message when the endpoint is unreachable.
 
