@@ -40,6 +40,7 @@ printf '{"from_bucket":"%s","from_key":"docs/hello.txt","to_key":"docs/renamed.t
 
 check "index served" "1" "$(curl -s "$BASE/" | grep -c 'id="rows"')"
 check "app.js served" "200" "$(code "$BASE/static/app.js")"
+check "theme bootstrap served" "200" "$(code "$BASE/static/theme.js")"
 check "accounts listed" "1" "$(curl -s "$BASE/api/accounts" | grep -c '"name":"local"')"
 
 # adding an account from the web UI
@@ -82,6 +83,13 @@ check "preview body" "hello web" "$(curl -s "$BASE/api/b/local/raw/$B/docs/hello
 check "preview content-type" "text/plain" "$(curl -s -o /dev/null -w '%{content_type}' "$BASE/api/b/local/raw/$B/docs/hello.txt" | cut -d';' -f1)"
 check "range request" "206" "$(code -H 'Range: bytes=0-4' "$BASE/api/b/local/raw/$B/docs/hello.txt")"
 check "download disposition" "1" "$(curl -s -D- -o /dev/null "$BASE/api/b/local/raw/$B/docs/hello.txt?download=1" | grep -ci 'content-disposition: attachment')"
+
+# an object's Content-Type is not a promise this server made: a document that can
+# run script gets a sandbox, and no response lets the browser re-type it
+curl -s -o /dev/null -X PUT -H 'Content-Type: text/html' --data-binary '<script>1</script>' "$BASE/api/b/local/raw/$B/docs/evil.html"
+check "html preview is sandboxed" "1" "$(curl -s -D- -o /dev/null "$BASE/api/b/local/raw/$B/docs/evil.html" | grep -ci '^content-security-policy: sandbox')"
+check "plain text preview is not sandboxed" "0" "$(curl -s -D- -o /dev/null "$BASE/api/b/local/raw/$B/docs/hello.txt" | grep -ci '^content-security-policy')"
+check "no type sniffing" "1" "$(curl -s -D- -o /dev/null "$BASE/api/b/local/raw/$B/docs/hello.txt" | grep -ci '^x-content-type-options: nosniff')"
 
 check "new folder" "204" "$(code -X PUT --data-binary '' "$BASE/api/b/local/raw/$B/sub/")"
 check "folder listed as prefix" "1" "$(curl -s "$BASE/api/b/local/objects/$B" | grep -c '"sub/"')"

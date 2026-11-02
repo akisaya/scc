@@ -49,8 +49,8 @@ function icon(path) {
 
 /* ---------- theme ---------- */
 
-// The theme is already on <html> by the time this file runs (index.html does it
-// before first paint); this only wires the toggle and follows the system.
+// The theme is already on <html> by the time this file runs (static/theme.js does
+// it before first paint); this only wires the toggle and follows the system.
 function applyTheme(theme, persist) {
   document.documentElement.dataset.theme = theme;
   if (persist) {
@@ -116,8 +116,10 @@ function clearToast() {
   delete box.dataset.msg;
 }
 
-// showBar renders the upload-style progress line into the toast slot.
-function showBar(label, pct) {
+// showBar renders the upload-style progress line into the toast slot. onCancel
+// is only passed by the upload loop; it turns the bar into something the user
+// can stop, which a single-object PUT otherwise is not.
+function showBar(label, pct, onCancel) {
   const box = $("#progress");
   if (!box.querySelector(".bar")) {
     box.innerHTML = `<div class="bar"><i></i></div><div class="lab"></div>`;
@@ -125,6 +127,15 @@ function showBar(label, pct) {
   box.dataset.msg = "busy";
   box.querySelector("i").style.width = pct.toFixed(1) + "%";
   box.querySelector(".lab").textContent = label;
+  const cancel = box.querySelector(".toast-cancel");
+  if (onCancel && !cancel) {
+    const b = el("button", "toast-cancel", "取消");
+    b.type = "button";
+    b.onclick = onCancel;
+    box.append(b);
+  } else if (!onCancel && cancel) {
+    cancel.remove();
+  }
 }
 
 function flash(msg, isErr) {
@@ -706,7 +717,12 @@ function syncSel() {
   all.indeterminate = on > 0 && on < boxes.length;
   all.disabled = boxes.length === 0;
   $("#selbar").hidden = state.selected.size === 0;
-  $("#selcount").textContent = `已选 ${state.selected.size} 项`;
+  // A filter hides rows without touching the selection, and the batch buttons act
+  // on the whole selection. Say so, instead of letting 已选 3 项 mean "one on screen".
+  const visible = new Set(state.visible);
+  const hidden = [...state.selected].filter((k) => !visible.has(k)).length;
+  $("#selcount").textContent = `已选 ${state.selected.size} 项` +
+    (hidden ? ` · 其中 ${hidden} 项被过滤隐藏` : "");
 }
 
 function render() {
@@ -890,14 +906,23 @@ function preview(key) {
     img.src = rawUrl(key);
     img.alt = base(key);
     body.append(img);
-  } else if (VIDEO.includes(e)) {
-    body.innerHTML = `<video src="${rawUrl(key)}" controls autoplay playsinline></video>`;
-  } else if (AUDIO.includes(e)) {
-    body.innerHTML = `<audio src="${rawUrl(key)}" controls autoplay style="width:100%"></audio>`;
+  } else if (VIDEO.includes(e) || AUDIO.includes(e)) {
+    // Built node by node, never by string: the key belongs to whoever can write
+    // to the bucket, so a quote in the name would otherwise close the attribute
+    // it sits in and turn the rest into markup.
+    const media = document.createElement(VIDEO.includes(e) ? "video" : "audio");
+    media.src = rawUrl(key);
+    media.controls = true;
+    media.autoplay = true;
+    if (media.tagName === "VIDEO") media.playsInline = true;
+    body.append(media);
   } else if (e === "pdf") {
-    body.innerHTML = `<iframe src="${rawUrl(key)}" title="${base(key)}"></iframe>`;
+    const frame = document.createElement("iframe");
+    frame.src = rawUrl(key);
+    frame.title = base(key);
+    body.append(frame);
   } else if (TEXT.includes(e)) {
-    body.innerHTML = `<pre>加载中…</pre>`;
+    body.append(el("pre", null, "加载中…"));
     fetch(rawUrl(key))
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -933,7 +958,8 @@ function noPreview(key, obj) {
 // 3000-key directory would otherwise overwrite silently.
 async function existingKeys(keys) {
   const list = keys.filter(Boolean).slice(0, 200);
-  if (!list.length) return new Set();  try {
+  if (!list.length) return new Set();
+  try {
     const r = await api(`/api/b/${encodeURIComponent(state.acct)}/stat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1086,10 +1112,12 @@ function openAccountForm() {
           flash(`已更新账户 ${data.name}`);
           return;
         } catch (e2) {
-          err.textContent = e2.message;
+          err.textContent = explainErr(e2.message) || e2.message;
         }
       } else {
-        err.textContent = e.message;
+        // the same one-liner the toasts use: this form is where a wrong endpoint
+        // or key is first typed, so it is the last place to show raw SDK text
+        err.textContent = explainErr(e.message) || e.message;
       }
       save.disabled = false;
     }
@@ -1145,7 +1173,16 @@ async function uploadFiles(files) {
 
   const total = files.length;
   let done = 0;
+  let cancelled = false;
+  let cur = null;
+  const stop = () => {
+    cancelled = true;
+    if (cur) cur.abort();
+    clearToast();
+    flash(`已取消上传：完成 ${done}/${total}`, true);
+  };
   const next = () => {
+    if (cancelled) return;
     if (done >= total) {
       flash(`已上传 ${total} 个文件` + (unchecked ? ` · 其中 ${unchecked} 个未做同名检查` : ""));
       load();
@@ -1153,14 +1190,15 @@ async function uploadFiles(files) {
     }
     const file = files[done];
     const xhr = new XMLHttpRequest();
+    cur = xhr;
     xhr.open("PUT", rawUrl(uploadKey(file)));
     xhr.upload.onprogress = (ev) => {
-      if (ev.lengthComputable) {
-        const pct = ((done + ev.loaded / ev.total) / total) * 100;
-        showBar(`上传 ${file.name} (${done + 1}/${total})`, pct);
-      }
+      if (cancelled || !ev.lengthComputable) return;
+      const pct = ((done + ev.loaded / ev.total) / total) * 100;
+      showBar(`上传 ${file.name} (${done + 1}/${total})`, pct, stop);
     };
     xhr.onload = () => {
+      if (cancelled) return;
       if (xhr.status >= 200 && xhr.status < 300) {
         done++;
         next();
@@ -1168,10 +1206,10 @@ async function uploadFiles(files) {
         flash(`上传失败 ${file.name}: ${xhr.responseText || xhr.status}`, true);
       }
     };
-    xhr.onerror = () => flash(`上传失败 ${file.name}: 网络错误`, true);
+    xhr.onerror = () => { if (!cancelled) flash(`上传失败 ${file.name}: 网络错误`, true); };
     xhr.send(file);
   };
-  showBar(`上传 ${files[0].name} (1/${total})`, 0);
+  showBar(`上传 ${files[0].name} (1/${total})`, 0, stop);
   next();
 }
 

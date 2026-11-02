@@ -212,7 +212,7 @@ POST requests must use `Content-Type: application/json`, which also prevents cro
 - **Addressing.** `scc accounts add` enables `path_style` when a custom `endpoint` is provided and leaves it disabled for AWS. A manually written configuration must set `path_style: true`; gateways such as MinIO and Ceph require it.
 - **Checksums.** Flexible checksums are calculated only when an operation requires them, consistent with the expected behavior of R2 and B2.
 - **Regions.** Defaults to `us-east-1` when unspecified; some gateways accept any value, while others reject an incorrect one.
-- **Previewing** uses a streamed server-side proxy (with `Range` support) rather than presigned URLs, so private buckets require no CORS configuration and links never expire.
+- **Previewing** uses a streamed server-side proxy (with `Range` support) rather than presigned URLs, so private buckets require no CORS configuration and links never expire. Types a browser renders as a document (`html`, `svg`, `xml`) come back with a `sandbox` CSP: they can be read, but their scripts do not run and cannot call `/api/` with this server's identity.
 - **Uploads** use a single `PutObject`, so the S3 per-object limit of 5 GB applies. The web handler first buffers the request body to a temporary file because the SDK requires a rewindable body to calculate the hash.
 - **Cross-account copy** is not supported: `cp` reports the limitation directly instead of failing with a confusing authentication error.
 
@@ -224,7 +224,7 @@ internal/cli/            command parsing and the shared target resolution
 internal/config/         YAML load/save, validation, secret indirection
 internal/s3x/            AWS SDK client, listing/get/put/copy/delete, error hints
 internal/web/            HTTP API, request logging, embedded UI
-internal/web/static/     index.html, app.js, style.css (no build step)
+internal/web/static/     index.html, app.js, style.css, theme.js (no build step)
 scripts/                 release-notes.sh: CHANGELOG section -> GitHub Release body
 test/                    end-to-end scripts against a real endpoint; test/mock/ is the local mock and seed data
 ```

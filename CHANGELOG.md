@@ -6,6 +6,34 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- The preview dialog no longer builds its markup from the object key. A key is
+  chosen by whoever can write to the bucket, and a quote in the name closed the
+  `title` attribute it sat in and added an event handler to the element. The
+  media and PDF branches now create their node and set properties on it.
+- The page is served with a `Content-Security-Policy` that allows no inline
+  script, so a value that escapes into markup cannot bring a handler with it.
+  The theme bootstrap moved to `static/theme.js` to allow this; it is still a
+  blocking script in `<head>`, so it still runs before the first paint.
+- `/raw` sends `X-Content-Type-Options: nosniff`, and the types a browser
+  renders as a document (`html`, `xhtml`, `svg`, `xml`) also get
+  `Content-Security-Policy: sandbox`. Opening an uploaded `.html` used to run its
+  script on this origin, where it could read `/api/accounts` or delete objects.
+
+### Fixed
+
+- An upload can be cancelled from the progress toast. A stalled 5 GB `PutObject`
+  used to leave reloading the page as the only way out.
+- A selection hidden by the filter is reported as such — `已选 3 项 · 其中 2 项被
+  过滤隐藏` — instead of reading as if all three were on screen, which is exactly
+  when a batch delete was about to remove something unseen.
+- The account form names a recognised failure in one line, like every other error
+  surface, instead of printing the raw SDK text; that form is where a wrong
+  endpoint or key is first typed.
+- The table is not clickable while the next page loads. The rows stayed dimmed
+  but kept their handlers, so a click landed on the directory being left.
+
 ## [0.5.0] - 2026-11-03
 
 The web UI sorts, selects in bulk, and asks before it overwrites something it

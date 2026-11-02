@@ -62,7 +62,7 @@ func Serve(cfg *config.Config) error {
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           logRequests(auth(cfg.Token, noStore(mux))),
+		Handler:           logRequests(auth(cfg.Token, defaultHeaders(mux))),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	fmt.Printf("scc web on http://%s\n", cfg.Listen)
@@ -117,12 +117,26 @@ func (r *statusRecorder) Flush() {
 	}
 }
 
-// noStore keeps browsers from serving stale embedded assets after an upgrade.
-func noStore(next http.Handler) http.Handler {
+// defaultHeaders keeps browsers from serving stale embedded assets after an
+// upgrade, and stops one from second-guessing a Content-Type this server chose.
+func defaultHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 		next.ServeHTTP(w, r)
 	})
+}
+
+// activeTypes are rendered by the browser as a document, and a document can run
+// script. Served from this origin it would reach the API the UI uses, so an
+// uploaded .html could list or delete objects. The sandbox CSP below gives those
+// responses an opaque origin and no script, while the markup still renders.
+var activeTypes = map[string]bool{
+	"text/html":             true,
+	"application/xhtml+xml": true,
+	"image/svg+xml":         true,
+	"text/xml":              true,
+	"application/xml":       true,
 }
 
 func isLocal(addr string) bool {
@@ -361,6 +375,12 @@ func handleGet(w http.ResponseWriter, r *http.Request) {
 	}
 	if ct != "" {
 		h.Set("Content-Type", ct)
+		// A key can be uploaded by anyone who can write to the bucket, so the type
+		// is not a promise this origin made. Render it, but never as a scriptable
+		// document on this origin.
+		if mediaType, _, err := mime.ParseMediaType(ct); err == nil && activeTypes[mediaType] {
+			h.Set("Content-Security-Policy", "sandbox")
+		}
 	}
 	if out.ContentLength != nil {
 		h.Set("Content-Length", strconv.FormatInt(*out.ContentLength, 10))

@@ -4,20 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark light">
+<!-- No inline script and no foreign source. Second layer behind the preview
+     dialog's node-by-node rendering: an object key that somehow reached markup
+     still cannot drag an inline handler in with it. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <title>scc</title>
 <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
-<script>
-/* Set the theme before the first paint. Doing it in app.js means a light-mode
-   visitor sees a dark frame while the script at the end of the body loads. */
-(function () {
-  var t = null;
-  try { t = localStorage.getItem("scc-theme"); } catch (e) { /* private mode */ }
-  if (!t) {
-    t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-  }
-  document.documentElement.dataset.theme = t;
-})();
-</script>
+<script src="/static/theme.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>

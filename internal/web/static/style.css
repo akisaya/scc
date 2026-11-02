@@ -512,7 +512,10 @@ td.more-cell .more-info { margin-right: 10px; }
 td.more-cell button { height: 28px; font-size: 12.5px; }
 
 .table-wrap { flex: 1; min-height: 0; overflow: auto; }
-/* dimmed while the next page loads; the old rows stay so the list never blanks */
+/* dimmed while the next page loads; the old rows stay so the list never blanks,
+   but they stop taking clicks: they belong to the directory being left. Only the
+   rows — the panel keeps its scrollbar, and the headers keep sorting. */
+.table-wrap.busy tbody { pointer-events: none; }
 .table-wrap.busy table { opacity: .5; transition: opacity .15s ease; }
 
 /* fixed layout keeps the action column pinned to the right on wide screens
@@ -664,6 +667,22 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
   font-size: 15px;
 }
 .toast-close:hover { background: var(--surface-2); color: var(--text); }
+/* the upload bar's only affordance: a 5 GB PUT with no way out is a reload */
+.toast-cancel {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  height: 22px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.toast-cancel:hover { background: var(--surface-2); color: var(--danger); }
+/* keep the bar from running under the button */
+#progress:has(.toast-cancel) { padding-right: 56px; }
 
 /* ---------- dialogs ---------- */
 .btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-danger); font-weight: 500; }
@@ -746,6 +765,7 @@ td.loading { padding: 26px 18px; text-align: center; color: var(--muted); }
 #modal .head-actions .btn { height: 30px; font-size: 12.5px; text-decoration: none; }
 #mbody { padding: 16px; overflow: auto; }
 #mbody img, #mbody video { display: block; max-width: 100%; max-height: 74vh; margin: 0 auto; border-radius: 10px; }
+#mbody audio { display: block; width: 100%; }
 #mbody iframe { width: 100%; height: 74vh; border: 0; border-radius: 10px; background: #fff; }
 #mbody pre {
   margin: 0;

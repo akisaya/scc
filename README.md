@@ -211,7 +211,7 @@ POST 请求必须携带 `Content-Type: application/json`，这同时可阻止跨
 - **寻址方式。** 填写自定义 `endpoint` 时，`scc accounts add` 会自动启用 `path_style`；AWS 则关闭该选项。手动编写配置文件时需自行设置 `path_style: true`，MinIO、Ceph 等网关需要此配置。
 - **校验和。** 仅在操作确实需要时计算 flexible checksum，符合 R2 和 B2 的预期行为。
 - **Region。** 未指定时默认为 `us-east-1`；部分网关接受任意值，部分网关会拒绝错误的值。
-- **预览** 通过服务端流式代理（支持 `Range`）实现，而非预签名 URL，因此私有桶无需配置 CORS，链接也不会过期。
+- **预览** 通过服务端流式代理（支持 `Range`）实现，而非预签名 URL，因此私有桶无需配置 CORS，链接也不会过期。浏览器会当作文档渲染的类型（`html`、`svg`、`xml`）带 `sandbox` CSP 返回：可以查看，但其中的脚本不会执行，也不会带本服务的身份去调用 `/api/`。
 - **上传** 使用单次 `PutObject`，受 S3 单对象 5 GB 上限约束。网页端会先将请求体写入临时文件，因为 SDK 需要一个可回退的 body 来计算哈希。
 - **跨账号拷贝** 不受支持：`cp` 会直接报错，避免产生容易混淆的鉴权失败。
 
@@ -223,7 +223,7 @@ internal/cli/            命令解析与路径解析（默认桶逻辑在这里�
 internal/config/         YAML 读写、校验、密钥环境变量替换
 internal/s3x/            AWS SDK 客户端、列目录/读写/拷贝/删除、错误提示
 internal/web/            HTTP API、请求日志、内嵌界面
-internal/web/static/     index.html、app.js、style.css（无构建步骤）
+internal/web/static/     index.html、app.js、style.css、theme.js（无构建步骤）
 scripts/                 release-notes.sh：把 CHANGELOG 段落转成 Release 正文
 test/                    针对真实 endpoint 的端到端脚本；test/mock/ 是本地 mock 与演示数据
 ```
