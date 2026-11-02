@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-03
+
+Bucket paths now mark bucket names with `//`.
+
 ### Changed
 
 - A bucket name is now always marked with a double slash: `acct://bucket/key`.
