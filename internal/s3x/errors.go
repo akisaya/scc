@@ -1,6 +1,29 @@
 package s3x
 
-import "strings"
+import (
+	"errors"
+	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+)
+
+// IsNotFound reports whether err means "this key or bucket does not exist".
+// Gateways disagree on which error type they return, so the shape of the
+// message is checked as well; a 404 can never mean a successful operation.
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	var notFound *types.NotFound
+	var noSuchKey *types.NoSuchKey
+	if errors.As(err, &notFound) || errors.As(err, &noSuchKey) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "StatusCode: 404") ||
+		strings.Contains(msg, "NoSuchKey") ||
+		strings.Contains(msg, "NotFound")
+}
 
 // Hint turns the SDK's error text into one actionable sentence. Errors from S3
 // compatible gateways bury the cause in a long "operation error S3: ..." line.

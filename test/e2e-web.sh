@@ -60,6 +60,14 @@ check "list shows object" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=do
 check "prefix equal to a key returns it" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=docs/hello.txt" | grep -c '"Key":"docs/hello.txt"')"
 check "partial key prefix matches" "1" "$(curl -s "$BASE/api/b/local/objects/$B?prefix=docs/hell" | grep -c '"Key":"docs/hello.txt"')"
 
+# stat answers "which of these keys already exist", used before an overwrite
+printf '{"bucket":"%s","keys":["docs/hello.txt","docs/nope.txt"]}' "$B" > "$T/stat.json"
+stat_body=$(curl -s -X POST -H 'Content-Type: application/json' --data @"$T/stat.json" "$BASE/api/b/local/stat")
+check "stat finds existing key" "1" "$(printf '%s' "$stat_body" | grep -c 'docs/hello.txt')"
+check "stat omits missing key" "0" "$(printf '%s' "$stat_body" | grep -c 'nope.txt')"
+check "stat requires json" "415" "$(code -X POST -d 'x' "$BASE/api/b/local/stat")"
+check "stat rejects empty keys" "400" "$(code -X POST -H 'Content-Type: application/json' -d '{"bucket":"x","keys":[]}' "$BASE/api/b/local/stat")"
+
 # listing is paginated: one page at a time, with a cursor for the rest
 for n in 1 2 3; do
   curl -s -o /dev/null -X PUT --data-binary "p$n" "$BASE/api/b/local/raw/$B/pag/$n.txt"

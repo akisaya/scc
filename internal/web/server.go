@@ -43,6 +43,7 @@ func Serve(cfg *config.Config) error {
 	mux.HandleFunc("PUT /api/b/{acct}/raw/{bucket}/{key...}", handlePut)
 	mux.HandleFunc("DELETE /api/b/{acct}/raw/{bucket}/{key...}", handleDelete)
 	mux.HandleFunc("POST /api/b/{acct}/copy", handleCopy)
+	mux.HandleFunc("POST /api/b/{acct}/stat", handleStat)
 
 	sub, err := fs.Sub(static, "static")
 	if err != nil {
@@ -461,6 +462,52 @@ func handleCopy(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// handleStat answers "which of these keys already exist" in one round trip.
+// The UI only knows about the pages it has loaded, so it asks the server before
+// an upload or a rename would silently overwrite something further down the list.
+func handleStat(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Bucket string   `json:"bucket"`
+		Keys   []string `json:"keys"`
+	}
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.Bucket == "" || len(body.Keys) == 0 {
+		http.Error(w, "expected {bucket, keys}", http.StatusBadRequest)
+		return
+	}
+	if len(body.Keys) > statLimit {
+		http.Error(w, fmt.Sprintf("at most %d keys per request", statLimit), http.StatusBadRequest)
+		return
+	}
+	c, _, err := client(r.PathValue("acct"))
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	existing := make([]string, 0, len(body.Keys))
+	for _, key := range body.Keys {
+		if key == "" {
+			continue
+		}
+		if _, err := c.Stat(r.Context(), body.Bucket, key); err != nil {
+			// A missing key is the answer, not a failure; anything else is real.
+			if s3x.IsNotFound(err) {
+				continue
+			}
+			writeErr(w, err)
+			return
+		}
+		existing = append(existing, key)
+	}
+	writeJSON(w, map[string]any{"existing": existing})
+}
+
+// statLimit caps one stat call so a huge drag-and-drop cannot turn into an
+// unbounded number of HEAD requests.
+const statLimit = 200
 
 // decodeJSON rejects anything that is not a JSON body, which also stops a
 // cross-site form post from reaching a handler without a CORS preflight.

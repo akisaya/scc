@@ -124,6 +124,22 @@ func (c *Client) GetRange(ctx context.Context, bucket, key, rng string) (*s3.Get
 	return c.GetObject(ctx, in)
 }
 
+// Stat reads an object's metadata without its body. The web UI uses it to warn
+// about an overwrite before uploading, where the local listing only covers the
+// pages that have been loaded so far.
+func (c *Client) Stat(ctx context.Context, bucket, key string) (Object, error) {
+	out, err := c.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(bucket), Key: aws.String(key)})
+	if err != nil {
+		return Object{}, err
+	}
+	return Object{
+		Key:          key,
+		Size:         aws.ToInt64(out.ContentLength),
+		LastModified: aws.ToTime(out.LastModified),
+		ETag:         aws.ToString(out.ETag),
+	}, nil
+}
+
 func (c *Client) Put(ctx context.Context, bucket, key string, body io.Reader, size int64, contentType string) error {
 	// shortcut: the SDK must rewind the body to hash it, so non-seekable input
 	// (an HTTP request body) is spilled to a temp file. Upgrade to presigned
