@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-03
+
+An object key is untrusted input, so the preview dialog renders it as a node,
+and `/raw` gives an uploaded document no script on this origin.
+
 ### Security
 
 - The preview dialog no longer builds its markup from the object key. A key is
