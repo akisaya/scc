@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-03
+
 The web UI sorts, selects in bulk, and asks before it overwrites something it
 could not see.
 
