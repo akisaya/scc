@@ -17,18 +17,19 @@ commands:
   accounts add <name> [flags]   add or update an account
   accounts list                 list accounts (secrets never printed)
   accounts rm <name>            remove an account
-  use <acct>:/bucket            switch the bucket <acct>: resolves against
-                                (omit the bucket to clear it)
-  ls <acct>:[/bucket[/prefix]] [-r] [-n N]
+  use <acct>://bucket           switch the bucket <acct>: resolves against
+                                (use <acct>: to clear it)
+  ls <acct>:[/prefix] [-r] [-n N]
+  ls <acct>://bucket[/prefix] [-r] [-n N]
                                 list buckets, objects or a directory
                                 (-n: entries to print; on a terminal 100 by
                                 default, -n 0 prints everything)
   buckets <acct>                list buckets (use when a default bucket is set)
-  cat <acct>:/bucket/key        write an object to stdout
+  cat <acct>://bucket/key       write an object to stdout
   cp [-r] <src> <dst>           copy between local and S3, or S3 to S3
-  rm [-r] <acct>:/bucket/key    delete an object or a prefix
-  mb <acct>:/bucket             create a bucket
-  rb <acct>:/bucket             delete an empty bucket
+  rm [-r] <acct>://bucket/key   delete an object or a prefix
+  mb <acct>://bucket            create a bucket
+  rb <acct>://bucket            delete an empty bucket
   web [-addr host:port]         start the browser UI (default from config listen)
   version                       print the version (stamped by the release build)
 
@@ -40,10 +41,11 @@ accounts add flags:
   -path-style     use path-style addressing (default when -endpoint is set)
   -default-bucket default bucket used by "acct:" without a bucket
 
-object paths are <account>:/bucket/key when no default bucket is set. Once an
-account has one, every path is relative to it: "acct:" is its root and
-"acct:/dir/file" is inside it. Switch with "scc use acct:/bucket", or write
-"acct://bucket/key" to name a bucket explicitly regardless of the default.
+object paths use "<account>:" for the account root and "<account>:/dir/file"
+for a path inside the default bucket. A bucket is always named with a double
+slash: "<account>://bucket/key" works with or without a default bucket. Without
+a default bucket, "<account>:/dir/file" is an error; set one with
+"scc use <account>://bucket".
 
 account names use letters, digits, '-', '_' and '.' (max 64 characters)
 
@@ -85,34 +87,31 @@ func Run(args []string) error {
 	}
 }
 
-// target is an "<account>:/bucket/key" reference. Empty bucket means "account root".
-// A double slash ("acct://bucket/key") names the bucket explicitly, which bypasses
-// the account's default bucket.
+// target is an "<account>:" reference. A double slash ("acct://bucket/key")
+// always names a bucket; a single slash ("acct:/dir/file") is relative to the
+// account's default bucket.
 type target struct {
 	acct     string
 	bucket   string
 	key      string
-	dir      bool // the path was written with a trailing slash
 	explicit bool // written as acct://bucket/...
 }
 
 func parseTarget(s string) (target, error) {
 	acct, rest, ok := strings.Cut(s, ":")
 	if !ok || acct == "" {
-		return target{}, fmt.Errorf("expected <account>:/bucket/key, got %q", s)
+		return target{}, fmt.Errorf("expected <account>:<path> or <account>://bucket/key, got %q", s)
 	}
-	explicit := strings.HasPrefix(rest, "//")
-	if explicit {
+	if strings.HasPrefix(rest, "//") {
 		rest = strings.TrimPrefix(rest, "//")
-	} else {
-		rest = strings.TrimPrefix(rest, "/")
+		bucket, key, _ := strings.Cut(rest, "/")
+		if bucket == "" {
+			return target{}, fmt.Errorf("expected <account>://bucket/key, got %q", s)
+		}
+		return target{acct: acct, bucket: bucket, key: key, explicit: true}, nil
 	}
-	dir := strings.HasSuffix(rest, "/")
-	bucket, key, _ := strings.Cut(rest, "/")
-	if explicit && bucket == "" {
-		return target{}, fmt.Errorf("expected <account>://bucket/key, got %q", s)
-	}
-	return target{acct: acct, bucket: bucket, key: key, dir: dir, explicit: explicit}, nil
+	rest = strings.TrimPrefix(rest, "/")
+	return target{acct: acct, key: rest}, nil
 }
 
 func isS3(s string) bool {
@@ -147,38 +146,39 @@ func withTarget(s string) (*s3x.Client, target, error) {
 	if err != nil {
 		return nil, t, err
 	}
-	t = resolveTarget(t, acct.DefaultBucket)
+	t, err = resolveTarget(t, acct.DefaultBucket)
+	if err != nil {
+		return nil, t, err
+	}
 	return c, t, nil
 }
 
-// resolveTarget applies the account's default bucket: when one is configured every
-// path is relative to it, so "acct:/cb_test/" is a folder there, never a bucket.
-// Without a default bucket the first segment is the bucket, as written.
-// "acct://bucket/key" always names the bucket, so it works with or without a default.
-func resolveTarget(t target, def string) target {
-	if def == "" || t.explicit {
-		return t
+// resolveTarget assigns the account's default bucket to a relative path.
+// "acct://bucket/key" already names a bucket, so it is returned unchanged.
+// Without a default bucket only "acct:" (the account root) is valid; a relative
+// path is an error because naming a bucket requires the double-slash form.
+func resolveTarget(t target, def string) (target, error) {
+	if t.explicit {
+		return t, nil
 	}
-	key := t.bucket
-	if t.key != "" {
-		key += "/" + t.key
-	} else if t.dir {
-		key += "/"
+	if def == "" {
+		if t.key == "" {
+			return t, nil
+		}
+		return target{}, fmt.Errorf("account %q has no default bucket; use %s://bucket/... or set one with scc use %s://bucket", t.acct, t.acct, t.acct)
 	}
-	t.key = key
 	t.bucket = def
-	return t
+	return t, nil
 }
 
-// bucketTarget handles commands that must name a bucket outright (mb, rb), so the
-// default-bucket remapping can never turn "acct:/newname" into the default bucket.
+// bucketTarget handles commands that must name a bucket outright (mb, rb).
 func bucketTarget(s string) (*s3x.Client, string, error) {
 	t, err := parseTarget(s)
 	if err != nil {
 		return nil, "", err
 	}
-	if t.bucket == "" || t.key != "" {
-		return nil, "", fmt.Errorf("expected <account>:/bucket, got %q", s)
+	if !t.explicit || t.key != "" {
+		return nil, "", fmt.Errorf("expected <account>://bucket, got %q", s)
 	}
 	c, _, err := clientFor(t.acct)
 	return c, t.bucket, err

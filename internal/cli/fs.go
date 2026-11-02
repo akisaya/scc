@@ -19,7 +19,7 @@ func lsCmd(args []string) error {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return errors.New("usage: scc ls <account>:[/bucket[/prefix]] [-r] [-n N]")
+		return errors.New("usage: scc ls <account>:[/prefix] or <account>://bucket[/prefix] [-r] [-n N]")
 	}
 	c, t, err := withTarget(fs.Arg(0))
 	if err != nil {
@@ -104,7 +104,7 @@ func bucketsCmd(args []string) error {
 
 func catCmd(args []string) error {
 	if len(args) != 1 {
-		return errors.New("usage: scc cat <account>:/bucket/key")
+		return errors.New("usage: scc cat <account>://bucket/key")
 	}
 	c, t, err := withTarget(args[0])
 	if err != nil {
@@ -130,7 +130,7 @@ func rmCmd(args []string) error {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return errors.New("usage: scc rm [-r] <account>:/bucket/key")
+		return errors.New("usage: scc rm [-r] <account>://bucket/key")
 	}
 	c, t, err := withTarget(fs.Arg(0))
 	if err != nil {
@@ -152,7 +152,7 @@ func rmCmd(args []string) error {
 
 func mbCmd(args []string) error {
 	if len(args) != 1 {
-		return errors.New("usage: scc mb <account>:/bucket")
+		return errors.New("usage: scc mb <account>://bucket")
 	}
 	c, bucket, err := bucketTarget(args[0])
 	if err != nil {
@@ -163,7 +163,7 @@ func mbCmd(args []string) error {
 
 func rbCmd(args []string) error {
 	if len(args) != 1 {
-		return errors.New("usage: scc rb <account>:/bucket")
+		return errors.New("usage: scc rb <account>://bucket")
 	}
 	c, bucket, err := bucketTarget(args[0])
 	if err != nil {

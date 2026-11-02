@@ -34,7 +34,7 @@ func cpCmd(args []string) error {
 	case isS3(dst):
 		return cpLocalToS3(src, dst, *recursive)
 	default:
-		return errors.New("one side must be <account>:/bucket/key")
+		return errors.New("one side must be <account>://bucket/key")
 	}
 }
 
@@ -175,7 +175,7 @@ func cpS3ToS3(src, dst string, recursive bool) error {
 		if err := dc.Copy(ctx, dt.bucket, key, s3x.Ref{Account: st.acct, Bucket: st.bucket, Key: st.key}); err != nil {
 			return err
 		}
-		fmt.Printf("%s:/%s/%s -> %s\n", st.acct, st.bucket, key, dt.acct)
+		fmt.Printf("%s://%s/%s -> %s\n", st.acct, st.bucket, key, dt.acct)
 		return nil
 	}
 

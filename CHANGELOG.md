@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- A bucket name is now always marked with a double slash: `acct://bucket/key`.
+  A single slash (`acct:/dir/file`) is relative to the account's default bucket
+  and is an error when no default is set. `acct:` still lists buckets, and
+  `mb`, `rb` and `use` now take `acct://bucket`.
+
 ## [0.3.1] - 2026-10-30
 
 The add-account dialog shows only what the form needs.

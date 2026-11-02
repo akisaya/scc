@@ -3,7 +3,7 @@
 
   # scc
 
-  *一个小巧的 S3 兼容文件浏览器 —— 一个二进制，网页界面和命令行都有了*
+  *一个小巧的 S3 兼容文件浏览器 —— 单个二进制，同时提供网页界面与命令行*
 
   [![Go](https://img.shields.io/badge/Go-%3E%3D1.24-00add8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
   [![单文件部署](https://img.shields.io/badge/%E9%83%A8%E7%BD%B2-%E5%8D%95%E4%B8%AA%E4%BA%8C%E8%BF%9B%E5%88%B6-2ea043?style=flat-square)](#%E5%AE%89%E8%A3%85)
@@ -14,40 +14,40 @@
   **中文** | [English](README.en.md)
 </div>
 
-`scc` 可以在浏览器或终端里浏览任何 S3 兼容存储 —— MinIO、Ceph RGW、Cloudflare R2、Backblaze B2、AWS S3 —— 而且两端走的是同一套实现。多个账号的凭证存在一个本地 YAML 文件里，所以除了二进制本身没有别的东西需要部署：没有服务端状态，没有数据库，加一个账号就是一行命令。
+`scc` 支持在浏览器或终端中浏览任何 S3 兼容存储，包括 MinIO、Ceph RGW、Cloudflare R2、Backblaze B2 和 AWS S3，两种界面共用同一套实现。多账号凭证保存在一个本地 YAML 文件中，因此除二进制外无需部署其他组件：没有服务端状态，也没有数据库，添加账号只需一行命令。
 
 ```bash
-go build .                              # 产出 ./scc
+go build .                              # 构建产物为 ./scc
 ./scc accounts add minio -endpoint http://127.0.0.1:9000 \
   -access-key minioadmin -secret-key minioadmin -default-bucket data
-./scc web                               # http://127.0.0.1:8080
+./scc web                               # 启动网页界面：http://127.0.0.1:8080
 ```
 
 > [!TIP]
-> 不想把密钥写进配置文件，就用环境变量：`-access-key env:MINIO_KEY -secret-key env:MINIO_SECRET`。
+> 如需避免将密钥写入配置文件，可使用环境变量：`-access-key env:MINIO_KEY -secret-key env:MINIO_SECRET`。
 
 ## 功能
 
-- **一套实现，两个前端。** 网页和命令行共用同一个操作层，列目录、上传、删除的行为完全一致。
-- **多账号。** 增删切换账号不用改 JSON、不用重启；网页每次请求都会重新读配置，改完立刻生效。
-- **每个账号一个默认桶。** `acct:/dir/file` 直接落在默认桶里，日常路径更短。用 `scc use` 切换，用 `acct://bucket/key` 显式指定桶。
-- **浏览器里直接预览。** 图片、视频/音频（可拖进度条）、PDF、文本和代码内联显示，其他类型一键下载。
-- **破坏性操作都要二次确认。** 删除文件、目录、桶，以及上传或重命名时的覆盖，都会弹出应用内确认框。
-- **错误说人话。** 常见 S3 故障（密钥错、AK 不存在、时钟偏移、权限不足、桶非空、TLS、连不上）会多打一行可执行的 `hint:`，而不是甩一整段 SDK 原文。
-- **深色 / 浅色主题。** 默认跟随系统，手动切换后会记住选择。
+- **统一实现，两种界面。** 网页与命令行共用同一操作层，目录列表、上传和删除的行为完全一致。
+- **多账号支持。** 增删和切换账号无需修改 JSON，也无需重启服务；网页每次请求都会重新读取配置，修改后立即生效。
+- **每个账号可设置默认桶。** `acct:/dir/file` 直接定位到默认桶内，常用路径更简洁。使用 `scc use acct://bucket` 切换默认桶，使用 `acct://bucket/key` 显式指定桶。
+- **浏览器内预览。** 图片、视频/音频（可拖动进度条）、PDF、文本和代码可内联显示，其他类型支持一键下载。
+- **破坏性操作均需二次确认。** 删除文件、目录、桶，以及上传或重命名时的覆盖操作，都会弹出应用内确认框。
+- **错误提示清晰可操作。** 常见 S3 故障（密钥错误、AK 不存在、时钟偏移、权限不足、桶非空、TLS 错误、无法连接）会额外输出一行可执行的 `hint:` 提示，而不是完整的 SDK 原始错误。
+- **深色 / 浅色主题。** 默认跟随系统设置，手动切换后会保留选择。
 
 ## 安装
 
-**不想装 Go**：到 [Releases](https://github.com/akisaya/scc/releases) 下载对应平台的预编译包（macOS / Linux / Windows，含 arm64），解压后把 `scc` 放进 `PATH`。
+**未安装 Go：** 从 [Releases](https://github.com/akisaya/scc/releases) 下载对应平台的预编译包（macOS / Linux / Windows，含 arm64），解压后将 `scc` 放入 `PATH`。
 
-**有 [Go 1.24+](https://go.dev/dl/)**：不用克隆仓库。
+**已安装 [Go 1.24+](https://go.dev/dl/)：** 无需克隆仓库。
 
 ```bash
 go install github.com/akisaya/scc@latest
 # -> $(go env GOPATH)/bin/scc   (Windows: %USERPROFILE%\go\bin)
 ```
 
-需要改代码时才克隆。仓库没有构建步骤，不依赖 npm，也没有生成代码。
+仅在需要修改代码时克隆仓库。仓库无需构建步骤，不依赖 npm，也不包含生成代码。
 
 ```bash
 git clone https://github.com/akisaya/scc && cd scc
@@ -56,10 +56,10 @@ go build .          # -> ./scc
 
 ## 快速开始
 
-添加一个账号，然后开始浏览：
+添加账号后即可开始浏览：
 
 ```bash
-# 自建 MinIO / Ceph：填了自定义 endpoint 会自动启用 path-style 寻址
+# 自建 MinIO / Ceph：填写自定义 endpoint 时会自动启用 path-style 寻址
 scc accounts add minio \
   -endpoint http://127.0.0.1:9000 \
   -access-key minioadmin -secret-key minioadmin \
@@ -70,15 +70,15 @@ scc accounts add r2 \
   -endpoint https://<account-id>.r2.cloudflarestorage.com \
   -access-key env:R2_ACCESS_KEY -secret-key env:R2_SECRET_KEY
 
-# AWS：不填 endpoint，使用虚拟主机寻址
+# AWS：不填写 endpoint，使用虚拟主机寻址
 scc accounts add aws -region ap-northeast-1 \
   -access-key env:AWS_ACCESS_KEY_ID -secret-key env:AWS_SECRET_ACCESS_KEY
 
-scc accounts list     # 永远不会打印 secret
-scc ls minio:         # 默认桶的根目录
+scc accounts list     # 不会输出 secret
+scc ls minio:         # 默认桶根目录
 ```
 
-对象路径形如 `minio:/data/reports/q3.pdf`。账号名有校验：只能包含字母、数字、`-`、`_`、`.`，最长 64 字符 —— 因为它会出现在路径和 URL 里。
+对象路径格式为 `minio://data/reports/q3.pdf`，其中 `//` 后为桶名；`minio:` 表示默认桶根目录。账号名需满足以下规则：仅可包含字母、数字、`-`、`_`、`.`，且最长 64 个字符，因为账号名会出现在路径和 URL 中。
 
 ## 命令行
 
@@ -90,75 +90,75 @@ scc <command> [args]
 | --- | --- |
 | `accounts add <name> [flags]` | 添加或更新账号 |
 | `accounts list` / `accounts rm <name>` | 列出账号 / 删除账号 |
-| `use <acct>:/bucket` | 把 `bucket` 设为该账号的默认桶（省略桶名即清除） |
+| `use <acct>://bucket` | 把 `bucket` 设为该账号的默认桶（使用 `<acct>:` 清除） |
 | `buckets <acct>` | 列桶，不受默认桶影响 |
-| `ls <acct>:[/bucket[/prefix]] [-r] [-n N]` | 列桶、列目录，或列整个前缀 |
-| `cat <acct>:/bucket/key` | 把对象写到标准输出 |
+| `ls <acct>:[/prefix]` / `<acct>://bucket[/prefix]` | 列桶、列目录，或列整个前缀 |
+| `cat <acct>:/key` / `<acct>://bucket/key` | 把对象写到标准输出 |
 | `cp [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝 |
-| `rm [-r] <acct>:/bucket/key` | 删除一个对象，或删除某个前缀下的全部对象 |
-| `mb` / `rb <acct>:/bucket` | 创建桶 / 删除空桶（必须写桶名） |
+| `rm [-r] <acct>:/key` / `<acct>://bucket/key` | 删除一个对象，或删除某个前缀下的全部对象 |
+| `mb` / `rb <acct>://bucket` | 创建桶 / 删除空桶（必须写桶名） |
 | `web [-addr host:port]` | 启动网页界面 |
 | `version` | 打印版本号（由发布构建注入） |
 
-来一轮实际操作：
+常用示例：
 
 ```bash
-scc buckets minio                       # 有哪些桶
-scc ls minio:/reports                   # 看一层
-scc ls -r minio:/reports -n 20          # 看下面全部，只显示前 20 条
+scc buckets minio                       # 列出所有桶
+scc ls minio:/reports                   # 列出下一层
+scc ls -r minio:/reports -n 20          # 递归列出，仅显示前 20 条
 scc cat minio:/reports/q3.pdf > q3.pdf
 scc cp ./q4.pdf minio:/reports/         # 上传文件
 scc cp -r ./assets minio:/reports/      # 上传目录
 scc cp -r minio:/reports/2025 ./reports-2025   # 下载一个前缀
-scc cp minio:/a.txt minio:/b.txt        # 服务端直接拷贝
+scc cp minio:/a.txt minio://data/b.txt  # 服务端直接拷贝（显式桶）
 scc rm -r minio:/tmp/                   # 删除一个前缀
 ```
 
 > [!NOTE]
-> `cp -r` 是把前缀的**内容**铺进目标目录（和 `aws s3 cp --recursive` 一致），所以上面的例子会得到 `./reports-2025/<2025 下的 key>`。除非确实想放进当前目录，否则请给一个明确的目录。
+> `cp -r` 会将前缀的**内容**复制到目标目录（行为与 `aws s3 cp --recursive` 一致），因此上述示例会得到 `./reports-2025/<2025 下的 key>`。请使用明确的目录，除非确实希望复制到当前目录。
 
 > [!TIP]
-> `ls` 在终端里最多打印 100 条，并告诉你被截断了；`-n 0` 可以打印全部。输出被管道或重定向时不会截断，脚本行为不受影响。选项也可以写在路径后面 —— `scc ls minio:/reports -n 20` 一样有效。
+> 在终端中，`ls` 最多输出 100 条，并提示结果已截断；`-n 0` 可输出全部。通过管道或重定向输出时不会截断，脚本行为不受影响。选项也可写在路径之后，例如 `scc ls minio:/reports -n 20`。
 
 ## 路径语法
 
-三种写法，没有猜测成分：
+三种写法，`//` 始终表示桶名：
 
 | 路径 | 含义 |
 | --- | --- |
-| `acct:` | 账号默认桶的根目录（未设置默认桶时退化为列桶） |
-| `acct:/dir/file` | 默认桶内的路径。没有默认桶时，第一段**就是**桶名 |
-| `acct://bucket/key` | 永远是某个桶，无论有没有配置默认桶 |
+| `acct:` | 账号默认桶的根目录（未设置默认桶时列出桶） |
+| `acct:/dir/file` | 默认桶内的路径；未设置默认桶时为错误 |
+| `acct://bucket/key` | 显式指定的桶，始终不受默认桶影响 |
 
 > [!NOTE]
-> 一旦设了默认桶，`acct:/reports/` 就是里面的一个目录，永远不会被当成名为 `reports` 的桶。要换默认桶用 `scc use acct:/other`；要在同一条命令里访问另一个桶，用双斜杠形式，例如 `scc cp acct:/a.txt acct://archive/a.txt`。
+> `//` 是桶名标记：`acct:/reports/` 始终是默认桶内的目录，不会因为存在名为 `reports` 的桶而改变含义。要设置或更换默认桶，使用 `scc use acct://bucket`；要访问其他桶，使用双斜杠形式，例如 `scc cp acct:/a.txt acct://archive/a.txt`。
 
-`mb` 和 `rb` 始终要求写出桶名，所以创建桶永远不会被"默认桶"重定向到别处。
+`mb`、`rb` 和 `use` 始终要求使用 `acct://bucket` 形式，因此桶名不会被“默认桶”重定向。
 
 ## 网页界面
 
-`scc web` 用同一个监听端口提供界面和 JSON API（默认 `127.0.0.1:8080`，或配置里的 `listen`）：
+`scc web` 通过同一监听端口提供界面与 JSON API（默认为 `127.0.0.1:8080`，或使用配置中的 `listen`）：
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
   <img src="docs/screenshot-light.png" alt="scc 网页界面：左侧是账号与桶，右侧是目录列表">
 </picture>
 
-- 侧栏列出账号与桶，点 `＋ 添加账户` 可以直接新增或更新账号。
-- 目录浏览带面包屑；当前路径写进 URL（`#/account/bucket/prefix`），刷新和前进后退都正常。
-- 上传支持按钮或拖拽并显示进度，另有新建文件夹、下载、重命名、删除、建桶删桶。
-- 预览弹窗显示路径、大小和修改时间，并提供 `下载` 与 `新标签打开`。
-- 目录分页加载：每页 200 条，底部「加载更多」会不断追加并显示已加载数量，不用一次性拉完整目录。
-- 顶部过滤框只过滤**已加载**的项，并在旁边标明匹配数量，避免让人以为漏了文件。
-- 「跳到前缀」输入框按 S3 前缀直接跳转（回车生效），不受已加载页数限制，适合直奔深层目录。
-- 每个 `/api/` 请求都会带状态码和耗时记入日志，浏览器端失败和服务端失败因此很容易区分。
+- 侧栏列出账号和桶，点击 `＋ 添加账户` 可直接新增或更新账号。
+- 目录浏览支持面包屑；当前路径会写入 URL（`#/account/bucket/prefix`），刷新和前进/后退均可正常使用。
+- 上传支持按钮和拖拽操作，并显示进度；此外还支持新建文件夹、下载、重命名、删除以及创建/删除桶。
+- 预览弹窗显示路径、大小和修改时间，并提供 `下载` 和 `新标签打开` 操作。
+- 目录采用分页加载：每页 200 条，底部的「加载更多」会持续追加内容并显示已加载数量，无需一次性加载完整目录。
+- 顶部过滤框仅过滤**已加载**的项，并在旁边显示匹配数量，避免误判为文件缺失。
+- 「跳到前缀」输入框可按 S3 前缀直接跳转（按回车生效），不受已加载页数限制，便于直接访问深层目录。
+- 每个 `/api/` 请求都会将状态码和耗时记录到日志中，便于区分浏览器端和服务端的失败。
 
 > [!WARNING]
-> 这个服务掌握着你的 S3 凭证，所以默认只绑回环地址。如果要暴露到其他网卡，请先在配置里设 `token`：之后界面需要 `?token=...` 访问一次（会写入 cookie），或使用 `Authorization: Bearer <token>`。这里没有按用户划分的权限 —— token 只是一个共享密钥。
+> 该服务持有 S3 凭证，因此默认仅绑定回环地址。如需在其他网络接口上暴露，请先在配置中设置 `token`：此后访问界面需先通过 `?token=...` 完成一次认证（会写入 cookie），或使用 `Authorization: Bearer <token>`。服务不提供按用户划分的权限控制，token 仅作为共享密钥使用。
 
 ## 配置
 
-纯 YAML，写入权限为 `0600`：
+配置文件为纯 YAML，权限为 `0600`：
 
 ```yaml
 listen: 127.0.0.1:8080
@@ -179,20 +179,20 @@ accounts:
       path_style: true
 ```
 
-文件位置，按顺序取第一个命中：
+文件位置按以下顺序查找，取第一个存在的文件：
 
 1. `$SCC_CONFIG`（完整文件路径）
 2. `$XDG_CONFIG_HOME/scc/config.yaml`
 3. `~/.config/scc/config.yaml` —— macOS 和 Linux 一致
 
-`scc accounts list` 会打印当前实际使用的路径。任何字符串值都可以写成 `env:NAME`，在使用时从环境变量取。
+`scc accounts list` 会输出当前实际使用的路径。任何字符串值均可写成 `env:NAME`，在使用时从环境变量读取。
 
 > [!NOTE]
-> 没有数据库，也没有常驻服务：配置文件是唯一的状态。`accounts add` 和网页表单改的是同一个文件，CLI 与界面读的也是同一个文件，所以两者不会不一致。
+> 没有数据库，也没有常驻服务：配置文件是唯一的状态来源。`accounts add` 和网页表单修改的是同一个文件，CLI 与界面读取的也是同一个文件，因此不会出现状态不一致。
 
 ## Web API
 
-界面就是这些接口的薄客户端，所以界面上能做的事都可以脚本来做：
+界面是这些接口的轻量客户端，因此界面上的操作均可通过脚本完成：
 
 | 方法 | 路径 | 用途 |
 | --- | --- | --- |
@@ -207,16 +207,16 @@ accounts:
 | `DELETE` | `/api/b/{acct}/raw/{bucket}/{key}` | 删除（`?recursive=1` 删前缀） |
 | `POST` | `/api/b/{acct}/copy` | 服务端拷贝 `{from_bucket, from_key, to_bucket, to_key}` |
 
-POST 必须带 `Content-Type: application/json`，这同时也挡住了跨站表单提交。
+POST 请求必须携带 `Content-Type: application/json`，这同时可阻止跨站表单提交。
 
 ## S3 兼容性
 
-- **寻址方式。** `scc accounts add` 在填写自定义 `endpoint` 时会自动打开 `path_style`，AWS 则关闭。手写配置文件需要自己写 `path_style: true` —— MinIO、Ceph 这类网关需要它。
-- **校验和。** 只在操作确实要求时才计算 flexible checksum，这正是 R2 和 B2 期望的行为。
-- **Region。** 不填就是 `us-east-1`；有的网关接受任意值，有的会拒绝错误的值。
-- **预览** 走服务端流式代理（支持 `Range`）而不是预签名 URL，所以私有桶不需要配 CORS，链接也不会过期。
-- **上传** 是单次 `PutObject`，受 S3 单对象 5 GB 上限约束。网页端会先把请求体落到临时文件，因为 SDK 需要一个可回退的 body 来算哈希。
-- **跨账号拷贝** 不支持：`cp` 会直接报错，而不是抛出一个让人困惑的鉴权失败。
+- **寻址方式。** 填写自定义 `endpoint` 时，`scc accounts add` 会自动启用 `path_style`；AWS 则关闭该选项。手动编写配置文件时需自行设置 `path_style: true`，MinIO、Ceph 等网关需要此配置。
+- **校验和。** 仅在操作确实需要时计算 flexible checksum，符合 R2 和 B2 的预期行为。
+- **Region。** 未指定时默认为 `us-east-1`；部分网关接受任意值，部分网关会拒绝错误的值。
+- **预览** 通过服务端流式代理（支持 `Range`）实现，而非预签名 URL，因此私有桶无需配置 CORS，链接也不会过期。
+- **上传** 使用单次 `PutObject`，受 S3 单对象 5 GB 上限约束。网页端会先将请求体写入临时文件，因为 SDK 需要一个可回退的 body 来计算哈希。
+- **跨账号拷贝** 不受支持：`cp` 会直接报错，避免产生容易混淆的鉴权失败。
 
 ## 开发
 
@@ -235,15 +235,15 @@ test/                    针对真实 endpoint 的端到端脚本
 go test ./...
 go vet ./...
 
-# 端到端；任何 S3 兼容 endpoint 都行（moto、MinIO 等）
+# 端到端测试；支持任意 S3 兼容 endpoint（moto、MinIO 等）
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 ./test/e2e-cli.sh
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 SCC_TEST_KEY=... SCC_TEST_SECRET=... ./test/e2e-web.sh
 ```
 
-端到端脚本会自己创建带随机后缀的桶，同时覆盖两种路径语义（有默认桶的账号和没有的账号），并在 endpoint 不可达时立刻给出明确提示。
+端到端脚本会自动创建带随机后缀的桶，覆盖两种路径语义（有默认桶和无默认桶的账号），并在 endpoint 不可达时立即给出明确提示。
 
-CI 会跑 `gofmt`、`go vet`、`go test -race`、`app.js` 语法检查，以及针对 S3 mock（`moto`）的两套端到端脚本。推送 `v0.1.0` 这类 tag 会构建 macOS / Linux / Windows 二进制，挂到 GitHub Release 上，并用 `CHANGELOG.md` 里对应的段落作为发布说明。
+CI 会运行 `gofmt`、`go vet`、`go test -race`、`app.js` 语法检查，以及针对 S3 mock（`moto`）的两套端到端脚本。推送 `v0.1.0` 等 tag 时会构建 macOS / Linux / Windows 二进制并附加到 GitHub Release，同时使用 `CHANGELOG.md` 中对应段落作为发布说明。
 
 ## 限制
 
-按单用户设计。没有分片或断点续传上传，没有预签名分享链接，没有对象版本管理，界面里没有搜索和排序，也不支持跨账号拷贝。界面一次只列一页（1000 个 key），批量操作请用命令行。清空整个桶刻意没有单条命令 —— 只能按前缀删，避免一行手滑清掉整个桶。
+按单用户场景设计。不支持分片或断点续传上传、预签名分享链接、对象版本管理，界面内不提供搜索和排序，也不支持跨账号拷贝。界面一次仅列出一页（1000 个 key），批量操作请使用命令行。清空整个桶有意不提供单条命令，只能按前缀删除，以避免误操作清空整个桶。

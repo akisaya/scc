@@ -757,6 +757,6 @@ loadAccounts().then(() => {
     openBucket(a.name, b, "");
   } else {
     $("#empty").hidden = false;
-    $("#empty").textContent = `点 ${a.name} 右侧的 ＋ 新建桶，或从命令行运行 scc mb ${a.name}:/bucket`;
+    $("#empty").textContent = `点 ${a.name} 右侧的 ＋ 新建桶，或从命令行运行 scc mb ${a.name}://bucket`;
   }
 });

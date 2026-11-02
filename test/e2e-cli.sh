@@ -26,7 +26,7 @@ B=bucket$RANDOM
 check "accounts file is 0600" "1" "$(find "$SCC_CONFIG" -maxdepth 0 -perm 600 | wc -l | tr -d ' ')"
 check "accounts list" "2" "$("$BIN" accounts list | grep -cE '^(local|plain)')"
 
-"$BIN" mb "local:/$B" || fail=$((fail+1))
+"$BIN" mb "local://$B" || fail=$((fail+1))
 check "buckets" "1" "$("$BIN" buckets local | grep -c "^$B$")"
 check "no default bucket lists buckets" "1" "$("$BIN" ls plain: | grep -c "^DIR.*$B/")"
 
@@ -38,7 +38,9 @@ check "ls prints names relative to the directory" "0" "$("$BIN" ls "local:/docs/
 check "ls -r keeps full keys" "1" "$("$BIN" ls -r "local:/docs/" | grep -c 'docs/a.txt')"
 
 # the same key reached through an account without a default bucket
-check "explicit bucket form" "hello scc" "$("$BIN" cat "plain:/$B/docs/a.txt")"
+check "explicit bucket form" "hello scc" "$("$BIN" cat "plain://$B/docs/a.txt")"
+check "single slash requires a default bucket" "1" \
+  "$("$BIN" ls "plain:/docs/" 2>&1 | grep -c 'no default bucket')"
 
 # a default bucket makes the first segment a folder, never a bucket
 "$BIN" cp "$T/a.txt" "local:/$B/literal.txt" >/dev/null
@@ -47,19 +49,19 @@ check "bucket name is just a folder" "1" "$("$BIN" ls "local:/" | grep -c "DIR.*
 "$BIN" rm -r "local:/$B/" >/dev/null
 
 B2=bucket2$RANDOM
-"$BIN" mb "local:/$B2" >/dev/null || fail=$((fail+1))
+"$BIN" mb "local://$B2" >/dev/null || fail=$((fail+1))
 check "mb still names a bucket" "1" "$("$BIN" buckets local | grep -c "^$B2$")"
 # acct://bucket/key reaches another bucket while a default is set
 "$BIN" cp "$T/a.txt" "local://$B2/cross.txt" >/dev/null || fail=$((fail+1))
 check "explicit bucket reachable despite the default" "hello scc" "$("$BIN" cat "local://$B2/cross.txt")"
 check "explicit form leaves the default alone" "hello scc" "$("$BIN" cat "local:/docs/a.txt")"
 "$BIN" rm "local://$B2/cross.txt" >/dev/null
-"$BIN" use "local:/$B2" >/dev/null
+"$BIN" use "local://$B2" >/dev/null
 "$BIN" cp "$T/a.txt" "local:/only-here.txt" >/dev/null
 check "paths follow the switched default" "hello scc" "$("$BIN" cat "local:/only-here.txt")"
 "$BIN" rm "local:/only-here.txt" >/dev/null
-"$BIN" rb "local:/$B2" >/dev/null || fail=$((fail+1))
-"$BIN" use "local:/$B" >/dev/null
+"$BIN" rb "local://$B2" >/dev/null || fail=$((fail+1))
+"$BIN" use "local://$B" >/dev/null
 check "use restores the default" "hello scc" "$("$BIN" cat "local:/docs/a.txt")"
 
 "$BIN" cp "$T/a.txt" "local:/docs/b.md" >/dev/null
@@ -89,7 +91,7 @@ check "rm single" "0" "$("$BIN" ls "local:/docs/" | grep -c 'copy.txt')"
 check "rm -r prefix" "0" "$("$BIN" ls "local:/" | grep -c 'tree/')"
 
 "$BIN" rm -r "local:/docs/" >/dev/null
-"$BIN" rb "local:/$B" || fail=$((fail+1))
+"$BIN" rb "local://$B" || fail=$((fail+1))
 check "bucket removed" "0" "$("$BIN" buckets local | grep -c "^$B$")"
 
 "$BIN" accounts rm local >/dev/null

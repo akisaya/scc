@@ -9,18 +9,17 @@ func TestParseTarget(t *testing.T) {
 	cases := []struct {
 		in                string
 		acct, bucket, key string
-		dir, explicit     bool
+		explicit          bool
 		wantErr           bool
 	}{
-		{in: "minio:/bucket/key", acct: "minio", bucket: "bucket", key: "key"},
-		{in: "minio:/bucket/dir/a.txt", acct: "minio", bucket: "bucket", key: "dir/a.txt"},
-		{in: "minio:/bucket", acct: "minio", bucket: "bucket"},
-		{in: "minio:/bucket/", acct: "minio", bucket: "bucket", dir: true},
-		{in: "minio:/dir/", acct: "minio", bucket: "dir", dir: true},
+		{in: "minio:/dir/file", acct: "minio", key: "dir/file"},
+		{in: "minio:/dir/", acct: "minio", key: "dir/"},
 		{in: "minio:", acct: "minio"},
 		{in: "minio:/", acct: "minio"},
 		{in: "minio://bucket/key", acct: "minio", bucket: "bucket", key: "key", explicit: true},
-		{in: "minio://bucket/", acct: "minio", bucket: "bucket", dir: true, explicit: true},
+		{in: "minio://bucket/dir/a.txt", acct: "minio", bucket: "bucket", key: "dir/a.txt", explicit: true},
+		{in: "minio://bucket", acct: "minio", bucket: "bucket", explicit: true},
+		{in: "minio://bucket/", acct: "minio", bucket: "bucket", explicit: true},
 		{in: "minio://", wantErr: true},
 		{in: "/tmp/local-file", wantErr: true},
 		{in: "no-colon", wantErr: true},
@@ -38,9 +37,9 @@ func TestParseTarget(t *testing.T) {
 			continue
 		}
 		if got.acct != c.acct || got.bucket != c.bucket || got.key != c.key ||
-			got.dir != c.dir || got.explicit != c.explicit {
-			t.Errorf("parseTarget(%q) = %+v, want {%s %s %s dir=%t explicit=%t}",
-				c.in, got, c.acct, c.bucket, c.key, c.dir, c.explicit)
+			got.explicit != c.explicit {
+			t.Errorf("parseTarget(%q) = %+v, want {%s %s %s explicit=%t}",
+				c.in, got, c.acct, c.bucket, c.key, c.explicit)
 		}
 	}
 }
@@ -81,19 +80,29 @@ func TestResolveTarget(t *testing.T) {
 		def        string
 		wantBucket string
 		wantKey    string
+		wantErr    bool
 	}{
-		{"no default keeps explicit bucket", target{bucket: "b", key: "k"}, "", "b", "k"},
-		{"no default keeps empty", target{}, "", "", ""},
-		{"default takes the root", target{}, "data", "data", ""},
-		{"default swallows the bucket segment", target{bucket: "cb_test", dir: true}, "data", "data", "cb_test/"},
-		{"default swallows nested path", target{bucket: "cb_test", key: "deep/f.txt"}, "data", "data", "cb_test/deep/f.txt"},
-		{"root file keeps no slash", target{bucket: "test_abc"}, "data", "data", "test_abc"},
-		{"another bucket name is just a folder", target{bucket: "langfuse", dir: true}, "data", "data", "langfuse/"},
-		{"explicit form bypasses the default", target{bucket: "langfuse", key: "x/y", explicit: true}, "data", "langfuse", "x/y"},
-		{"explicit form without a default", target{bucket: "b", key: "k", explicit: true}, "", "b", "k"},
+		{"no default keeps the account root", target{}, "", "", "", false},
+		{"no default rejects a relative path", target{key: "docs/a.txt"}, "", "", "", true},
+		{"default takes the root", target{}, "data", "data", "", false},
+		{"default resolves a relative path", target{key: "cb_test/"}, "data", "data", "cb_test/", false},
+		{"default resolves a nested path", target{key: "cb_test/deep/f.txt"}, "data", "data", "cb_test/deep/f.txt", false},
+		{"bucket name is never inferred", target{key: "langfuse/"}, "data", "data", "langfuse/", false},
+		{"explicit form bypasses the default", target{bucket: "langfuse", key: "x/y", explicit: true}, "data", "langfuse", "x/y", false},
+		{"explicit form without a default", target{bucket: "b", key: "k", explicit: true}, "", "b", "k", false},
 	}
 	for _, c := range cases {
-		got := resolveTarget(c.in, c.def)
+		got, err := resolveTarget(c.in, c.def)
+		if c.wantErr {
+			if err == nil {
+				t.Errorf("%s: resolveTarget(%+v, %q) = %+v, want error", c.name, c.in, c.def, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%s: resolveTarget(%+v, %q): %v", c.name, c.in, c.def, err)
+			continue
+		}
 		if got.bucket != c.wantBucket || got.key != c.wantKey {
 			t.Errorf("%s: resolveTarget(%+v, %q) = %+v, want bucket=%q key=%q",
 				c.name, c.in, c.def, got, c.wantBucket, c.wantKey)
