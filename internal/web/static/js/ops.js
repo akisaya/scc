@@ -48,16 +48,25 @@ export async function rename(key) {
   const to = dirOf(key) + next;
   const known = state.objectKeys.has(to) ? new Set([to]) : await existingKeys([to]);
   if (known.has(to) && !(await askConfirm(`${next} 已存在，覆盖？`, "覆盖"))) return;
+  // S3 has no rename: it is a copy, then a delete of the original. If only the
+  // copy went through there are now two objects, and the message has to say so.
   try {
     await api(`/api/b/${encodeURIComponent(state.acct)}/copy`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ from_bucket: state.bucket, from_key: key, to_bucket: state.bucket, to_key: to }),
     });
+  } catch (e) {
+    flash(e.message, true, `重命名失败：没能复制为 ${next}，原文件没动`);
+    return;
+  }
+  try {
     await api(rawUrl(key), { method: "DELETE" });
     flash(`已重命名为 ${next}`);
-    load();
-  } catch (e) { flash(e.message, true); }
+  } catch (e) {
+    flash(e.message, true, `已复制为 ${next}，但删除原文件 ${base(key)} 失败，现在两份都在`);
+  }
+  load();
 }
 
 export async function newFolder() {

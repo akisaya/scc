@@ -13,10 +13,7 @@ function field(labelText, input, hint) {
   const l = el("label");
   l.append(el("span", null, labelText), input);
   if (hint) {
-    const h = el("span", "field-hint", hint);
-    h.style.color = "var(--muted)";
-    h.style.opacity = ".8";
-    l.append(h);
+    l.append(el("span", "field-hint", hint));
   }
   return l;
 }

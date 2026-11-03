@@ -4,7 +4,7 @@ import { $ } from "./dom.js";
 import { state } from "./state.js";
 import { base } from "./format.js";
 import { rawUrl } from "./api.js";
-import { clearToast, showBar, flash } from "./toast.js";
+import { hideBar, showBar, flash } from "./toast.js";
 import { askConfirm } from "./dialogs.js";
 import { load } from "./browse.js";
 import { existingKeys } from "./ops.js";
@@ -30,18 +30,19 @@ export async function uploadFiles(files, note = "") {
   let cur = null;
   // the files that did go up must show in the list however the run ends
   const halt = (msg) => {
+    hideBar();
     flash(msg + note, true);
     if (done) load();
   };
   const stop = () => {
     cancelled = true;
     if (cur) cur.abort();
-    clearToast();
     halt(`已取消上传：完成 ${done}/${total}`);
   };
   const next = () => {
     if (cancelled) return;
     if (done >= total) {
+      hideBar();
       flash(`已上传 ${total} 个文件` + (unchecked ? ` · 其中 ${unchecked} 个未做同名检查` : "") + note);
       load();
       return;

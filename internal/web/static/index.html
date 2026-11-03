@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<aside>
+<aside id="sidebar" aria-label="账户与桶">
   <div class="brand">
     <img class="logo" src="/static/logo.svg" width="22" height="22" alt="">
     <span>scc</span>
@@ -26,9 +26,14 @@
   <div id="accounts"></div>
   <button id="addaccount" class="add-account">＋ 添加账户</button>
 </aside>
+<div id="scrim" hidden></div>
 
 <main>
   <header>
+    <button id="navtoggle" class="icon-btn drawer-only" type="button" title="账户与桶"
+            aria-label="打开账户与桶" aria-controls="sidebar" aria-expanded="false">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
     <nav id="crumbs" aria-label="当前位置"></nav>
     <div class="search">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4.5 4.5"/></svg>
@@ -79,7 +84,14 @@
     </table>
     <div id="empty" class="hint" hidden></div>
   </div>
-  <div id="progress"></div>
+  <div id="toasts" role="region" aria-label="通知">
+    <div id="msgs" aria-live="polite"></div>
+    <div id="progress" class="toast" hidden>
+      <div class="bar"><i></i></div>
+      <div class="lab" aria-live="polite"></div>
+      <button class="toast-cancel" type="button" hidden>取消</button>
+    </div>
+  </div>
 </main>
 
 <div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mtitle">
@@ -90,6 +102,15 @@
         <span id="mmeta" class="meta"></span>
       </div>
       <div class="head-actions">
+        <div class="pager" id="mpager">
+          <button id="mprev" class="icon-btn" type="button" title="上一个（←）" aria-label="上一个文件">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg>
+          </button>
+          <span id="mpos" class="pos" aria-live="polite"></span>
+          <button id="mnext" class="icon-btn" type="button" title="下一个（→）" aria-label="下一个文件">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
+          </button>
+        </div>
         <a id="mdownload" class="btn btn-primary">下载</a>
         <a id="mopen" class="btn ghost" target="_blank" rel="noopener">新标签打开</a>
         <button id="mclose" class="ghost" type="button">关闭</button>

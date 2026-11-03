@@ -13,8 +13,25 @@ All notable changes to this project are documented here. The format follows
   CSP is unchanged. The modules that do not touch the DOM (formatting, the URL
   hash, sorting, error naming) have unit tests in `test/web/`, which CI runs
   with `node --test`.
+- The page works from the keyboard. Buckets, breadcrumbs and directory names
+  are links, file names are buttons, so Tab reaches all of them; ↑/↓ moves
+  between rows and Delete or ⌘⌫ deletes the focused one after its confirm.
+  Focus stays on the same row when the table redraws.
+- Below 640px the sidebar is a drawer, and the breadcrumbs take a row of their
+  own. A 172px sidebar column left the breadcrumbs no width at all on a phone.
+- Progress and messages are separate toasts. A message no longer replaces a
+  running upload's bar, and up to three messages stack.
+- The preview steps to the previous or next file with ←/→ or the header arrows,
+  following the filter and sort of the list on screen.
+- Font sizes come from five tokens instead of nine values between 10.5px and
+  15px, and the page edge is one `--gutter` value.
 
 ### Fixed
+
+- A rename whose copy succeeded but whose delete failed says that both objects
+  now exist, instead of showing only the delete's error.
+- Below 860px the row buttons were invisible: hiding the date cells with
+  `display: none` slid the action cell into the zero-width date column.
 
 - An account without a default bucket opens its first bucket on load. Boot used
   to look for the bucket rows before their listing came back, and said to

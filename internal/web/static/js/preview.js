@@ -30,9 +30,34 @@ export function closeModal() {
   $("#mbody").innerHTML = "";
 }
 
-export function preview(key) {
+// The files the preview steps through: the ones on screen, in screen order, so
+// the filter and the sort carry over. Directories cannot be previewed.
+const siblings = () => state.visible.filter((k) => !k.endsWith("/"));
+let current = "";
+let seq = 0;
+
+function step(by) {
+  const list = siblings();
+  const next = list[list.indexOf(current) + by];
+  if (next) preview(next, true);
+}
+
+function paintPager() {
+  const list = siblings();
+  const i = list.indexOf(current);
+  $("#mpager").hidden = list.length < 2 || i < 0;
+  $("#mprev").disabled = i <= 0;
+  $("#mnext").disabled = i < 0 || i >= list.length - 1;
+  $("#mpos").textContent = `${i + 1} / ${list.length}`;
+}
+
+// stepping keeps focus where it is (on ← / → or the arrow key's target);
+// opening from the table moves it into the dialog
+export function preview(key, stepping) {
   const obj = state.objectByKey.get(key);
   const body = $("#mbody");
+  const mine = ++seq;
+  current = key;
   body.innerHTML = "";
   $("#mtitle").textContent = key;
   $("#mmeta").textContent = obj
@@ -42,8 +67,9 @@ export function preview(key) {
   $("#mopen").href = rawUrl(key);
   $("#modal .head-actions").hidden = false;
   $("#modal").querySelector(".box").classList.remove("narrow");
+  paintPager();
   openModal();
-  $("#mclose").focus();
+  if (!stepping || !$("#modal").contains(document.activeElement)) $("#mclose").focus();
 
   const e = ext(key);
   if (IMG.includes(e)) {
@@ -79,15 +105,30 @@ export function preview(key) {
         return r.text();
       })
       .then((t) => {
+        if (mine !== seq) return; // the user stepped on before this arrived
         const cut = t.slice(0, TEXT_PREVIEW_BYTES);
         const more = big || t.length > cut.length;
         const note = more ? `\n\n… (已截断，只显示前 ${fmtSize(TEXT_PREVIEW_BYTES)}；完整内容请下载)` : "";
         body.replaceChildren(el("pre", null, cut + note));
       })
-      .catch((err) => body.replaceChildren(el("div", "err", `读取失败：${err.message}`)));
+      .catch((err) => { if (mine === seq) body.replaceChildren(el("div", "err", `读取失败：${err.message}`)); });
   } else {
     body.append(noPreview(key, obj));
   }
+}
+
+export function initPreview() {
+  $("#mprev").onclick = () => step(-1);
+  $("#mnext").onclick = () => step(1);
+  $("#modal").addEventListener("keydown", (ev) => {
+    if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
+    // the account form shares this dialog; media and fields use the arrows themselves
+    if ($("#modal .head-actions").hidden) return;
+    if (ev.target.closest("input, textarea, select, video, audio")) return;
+    ev.preventDefault();
+    step(ev.key === "ArrowLeft" ? -1 : 1);
+  });
 }
 
 // noPreview is the card shown for types the browser cannot render.

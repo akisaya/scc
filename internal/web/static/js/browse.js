@@ -3,7 +3,7 @@
 import { $ } from "./dom.js";
 import { state } from "./state.js";
 import { api } from "./api.js";
-import { stateHash, parseHash } from "./router.js";
+import { hrefFor, stateHash, parseHash } from "./router.js";
 import { explainErr, errCard } from "./errors.js";
 import { loadAccounts, paintActive } from "./sidebar.js";
 import { render } from "./table.js";
@@ -53,12 +53,27 @@ export async function openBucket(acct, bucket, prefix) {
   await load();
 }
 
+// locLink is a real link to a location: it is in the tab order, Enter follows
+// it, and a middle or modified click opens it in a new tab. A plain click still
+// goes through openBucket so clicking where you already are reloads the listing,
+// which following an unchanged hash would not.
+export function locLink(acct, bucket, prefix, cls) {
+  const a = document.createElement("a");
+  if (cls) a.className = cls;
+  a.href = hrefFor(acct, bucket, prefix);
+  a.onclick = (ev) => {
+    if (ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+    ev.preventDefault();
+    openBucket(acct, bucket, prefix);
+  };
+  return a;
+}
+
 function crumbs() {
   const nav = $("#crumbs");
   nav.innerHTML = "";
-  const root = document.createElement("a");
+  const root = locLink(state.acct, state.bucket, "");
   root.textContent = `${state.acct}/${state.bucket}`;
-  root.onclick = () => openBucket(state.acct, state.bucket, "");
   nav.append(root);
   let acc = "";
   for (const part of state.prefix.split("/").filter(Boolean)) {
@@ -67,14 +82,17 @@ function crumbs() {
     sep.className = "sep";
     sep.setAttribute("aria-hidden", "true"); // drawn by CSS; the path is read from the links
     nav.append(sep);
-    const a = document.createElement("a");
+    // the last part of a partial prefix ("many/shard_03") is not a directory
+    const target = state.prefix.startsWith(acc) ? acc : state.prefix;
+    const a = locLink(state.acct, state.bucket, target);
     a.textContent = part;
-    const target = acc;
-    a.onclick = () => openBucket(state.acct, state.bucket, target);
     nav.append(a);
   }
   const last = nav.lastElementChild;
-  if (last && last.tagName === "A") last.classList.add("cur");
+  if (last && last.tagName === "A") {
+    last.classList.add("cur");
+    last.setAttribute("aria-current", "location");
+  }
   // a deep path overflows: show its tail, which is the part being browsed
   nav.scrollLeft = nav.scrollWidth;
   nav.classList.toggle("fade-left", nav.scrollLeft > 2);

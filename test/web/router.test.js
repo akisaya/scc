@@ -1,7 +1,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { state } from "../../internal/web/static/js/state.js";
-import { stateHash, parseHash } from "../../internal/web/static/js/router.js";
+import { hrefFor, stateHash, parseHash } from "../../internal/web/static/js/router.js";
 
 beforeEach(() => {
   globalThis.location = { hash: "" };
@@ -24,6 +24,12 @@ test("a partial prefix is marked, a directory is not", () => {
   assert.equal(stateHash(), "#/mock/models/many/shard_03?");
   at("");
   assert.equal(stateHash(), "#/mock/models/");
+});
+
+test("hrefFor builds the same hash the current location would", () => {
+  assert.equal(hrefFor("a b", "bk", "x/中/"), "#/a%20b/bk/x/%E4%B8%AD");
+  assert.equal(hrefFor("a", "bk"), "#/a/bk/");
+  assert.equal(hrefFor("a", "bk", "pre"), "#/a/bk/pre?");
 });
 
 test("links written before the partial marker still open a directory", () => {

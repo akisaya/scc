@@ -6,7 +6,7 @@ import { base, fmtSize, fmtTime, fmtFull } from "./format.js";
 import { rawUrl } from "./api.js";
 import { displayName, matches, sortDirs, sortObjs } from "./listing.js";
 import { paintActive } from "./sidebar.js";
-import { openBucket, loadMore } from "./browse.js";
+import { locLink, loadMore } from "./browse.js";
 import { preview } from "./preview.js";
 import { del, rename } from "./ops.js";
 
@@ -72,8 +72,33 @@ function syncSel() {
     (hidden ? ` · 其中 ${hidden} 项被过滤隐藏` : "");
 }
 
+// Rebuilding the rows drops keyboard focus on the floor. focusBefore notes which
+// row had it, so the same row (or the one now in its place) gets it back.
+let lastWhere = "";
+
+function focusBefore(rows) {
+  const at = document.activeElement;
+  const tr = rows.contains(at) ? at.closest("tr") : null;
+  const rowsBefore = [...rows.querySelectorAll("tr[data-key]")];
+  return { key: tr && tr.dataset.key, index: tr ? rowsBefore.indexOf(tr) : -1, had: !!tr };
+}
+
+function restoreFocus(rows, mark) {
+  const where = `${state.acct}/${state.bucket}/${state.prefix}`;
+  const moved = where !== lastWhere;
+  lastWhere = where;
+  if (!mark.had) return;
+  const all = [...rows.querySelectorAll("tr[data-key]")];
+  // a new directory starts from its first row; the same one keeps its place
+  const tr = moved ? all[0]
+    : all.find((r) => r.dataset.key === mark.key) || all[Math.min(mark.index, all.length - 1)];
+  const target = tr && tr.querySelector(".name-link");
+  if (target) target.focus();
+}
+
 export function render() {
   const rows = $("#rows");
+  const mark = focusBefore(rows);
   rows.innerHTML = "";
   $(".table-wrap").classList.remove("busy");
 
@@ -95,11 +120,13 @@ export function render() {
   for (const p of dirs) {
     const name = displayName(p).replace(/\/$/, "");
     const tr = el("tr");
+    tr.dataset.key = p;
     if (state.selected.has(p)) tr.className = "sel";
     tr.append(checkCell(p, tr));
     const td = el("td", "name");
-    td.append(icon(ICON.folder), document.createTextNode(name + "/"));
-    td.onclick = () => openBucket(state.acct, state.bucket, p);
+    const link = locLink(state.acct, state.bucket, p, "name-link");
+    link.append(icon(ICON.folder), el("span", "label", name + "/"));
+    td.append(link);
     const act = el("td", "act");
     act.append(actionBtn(ICON.trash, "删除目录及其内容", () => del(p, true), true));
     tr.append(td, el("td", "num", "-"), el("td", "date", "-"), act);
@@ -109,12 +136,16 @@ export function render() {
   for (const o of objs) {
     const name = displayName(o.Key);
     const tr = el("tr");
+    tr.dataset.key = o.Key;
     if (state.selected.has(o.Key)) tr.className = "sel";
     tr.append(checkCell(o.Key, tr));
     const td = el("td", "name");
-    td.append(icon(ICON.file), document.createTextNode(name));
-    td.title = o.Key;
-    td.onclick = () => preview(o.Key);
+    const open = el("button", "name-link");
+    open.type = "button";
+    open.title = o.Key;
+    open.append(icon(ICON.file), el("span", "label", name));
+    open.onclick = () => preview(o.Key);
+    td.append(open);
     const date = el("td", "date", fmtTime(o.LastModified));
     date.title = fmtFull(o.LastModified);
     const act = el("td", "act");
@@ -147,6 +178,32 @@ export function render() {
 
   paintActive();
   syncSel();
+  restoreFocus(rows, mark);
+}
+
+// Arrow keys move between rows, Delete (or ⌘⌫) deletes the focused one through
+// its own confirm. Only when focus is in a row, so the page keeps its scrolling.
+function rowKeys(ev) {
+  const tr = ev.target.closest && ev.target.closest("tr");
+  if (!tr || !$("#rows").contains(tr)) return;
+  const plain = !ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey;
+  if (plain && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) {
+    const links = [...$("#rows").querySelectorAll(".name-link")];
+    const i = links.indexOf(tr.querySelector(".name-link"));
+    const next = ev.key === "ArrowDown"
+      ? links[i < 0 ? links.length : i + 1]
+      : links[i < 0 ? links.length - 1 : i - 1];
+    if (!next) return;
+    ev.preventDefault();
+    next.focus();
+    next.scrollIntoView({ block: "nearest" });
+  } else if ((plain && ev.key === "Delete") || (ev.metaKey && ev.key === "Backspace")) {
+    if (ev.target.tagName === "INPUT" && ev.target.type !== "checkbox") return;
+    const del = tr.querySelector(".row-act.danger");
+    if (!del) return;
+    ev.preventDefault();
+    del.click();
+  }
 }
 
 export function initTable() {
@@ -164,4 +221,5 @@ export function initTable() {
     };
   });
   paintSort();
+  $("#rows").addEventListener("keydown", rowKeys);
 }

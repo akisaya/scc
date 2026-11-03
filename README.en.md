@@ -180,7 +180,11 @@ scc rm -r minio:/tmp/                   # delete a prefix
 - Directories are paginated: 200 entries per page, and `加载更多` appends more entries while showing the number loaded so far.
 - One search box does both jobs: typing filters the entries that have been loaded (the footer says so), and Enter treats the text as an S3 prefix and navigates there, including keys that have not been loaded.
 - Click a column header to cycle through ascending → descending → back to the default order (the key order the server returns), so a sort never traps the table. Name order matches `scc ls` (directories first, then key order within each group). Modification times are shown as `2026-11-03 01:42`, with the full stamp including seconds in the tooltip.
-- The checkbox on each row enables multi-select for batch download and batch delete; per-row actions are icon buttons that appear on hover.
+- The checkbox on each row enables multi-select for batch download and batch delete; per-row actions are icon buttons that appear on hover or when the row has keyboard focus.
+- Everything works from the keyboard: Tab reaches the buckets, the breadcrumbs and every row, Enter opens, ↑/↓ moves between rows, and Delete (or ⌘⌫) deletes the focused row after a confirm. Buckets, directories and breadcrumbs are real links, so a middle or ⌘ click opens them in a new tab.
+- In the preview dialog, ←/→ or the arrows in its header step to the previous or next file, in the order of the list on screen (filter and sort included).
+- Below 640px the sidebar folds into a drawer behind the button at the top left, and the breadcrumbs get a row of their own.
+- Upload and batch-delete progress has its own card; messages stack above it, three at most, so a message no longer replaces a running progress bar.
 - Before an upload or a rename overwrites anything, the server is asked whether the target key exists, so a key that is not on a loaded page is not overwritten silently.
 - Every `/api/` request is logged with its status code and duration, making it easy to distinguish browser-side failures from server-side failures.
 

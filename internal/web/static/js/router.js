@@ -7,13 +7,14 @@ import { state } from "./state.js";
 // partial prefix from the search box ("many/shard_03") gets a trailing "?",
 // otherwise a refresh would reopen it as the directory many/shard_03/. Keys can
 // never produce a bare "?": encodeURIComponent escapes it inside a segment.
-export function stateHash() {
-  const segs = [state.acct, state.bucket];
-  const parts = state.prefix.split("/").filter(Boolean);
-  const partial = state.prefix !== "" && !state.prefix.endsWith("/");
-  return "#/" + [...segs, ...parts].map(encodeURIComponent).join("/") +
+export function hrefFor(acct, bucket, prefix = "") {
+  const parts = prefix.split("/").filter(Boolean);
+  const partial = prefix !== "" && !prefix.endsWith("/");
+  return "#/" + [acct, bucket, ...parts].map(encodeURIComponent).join("/") +
     (parts.length ? "" : "/") + (partial ? "?" : "");
 }
+
+export const stateHash = () => hrefFor(state.acct, state.bucket, state.prefix);
 
 export function parseHash() {
   let raw = location.hash.replace(/^#\/?/, "");

@@ -4,7 +4,7 @@ import { $ } from "./dom.js";
 import { state } from "./state.js";
 import { base } from "./format.js";
 import { api, rawUrl } from "./api.js";
-import { clearToast, showBar, flash } from "./toast.js";
+import { hideBar, showBar, flash } from "./toast.js";
 import { askConfirm } from "./dialogs.js";
 import { load } from "./browse.js";
 import { render } from "./table.js";
@@ -67,7 +67,7 @@ export function initSelection() {
         firstErr = firstErr || e.message;
       }
     }
-    clearToast();
+    hideBar();
     if (fail) flash(`已删除 ${ok} 项，${fail} 项失败\n${firstErr}`, true);
     else flash(`已删除 ${ok} 项`);
     state.selected.clear();
