@@ -41,10 +41,13 @@ jobs:
         with:
           node-version: '24'
 
-      # The UI has no build step, so there is nothing to bundle; a syntax check
-      # is enough to catch a broken app.js before it ships inside the binary.
+      # The UI has no build step, so there is nothing to bundle: the modules are
+      # checked one by one, and the ones without DOM access are unit-tested.
       - name: frontend syntax check
-        run: node --check internal/web/static/app.js
+        run: for f in internal/web/static/js/*.js; do node --check "$f" || exit 1; done
+
+      - name: frontend unit tests
+        run: node --test 'test/web/*.test.js'
 
   e2e:
     runs-on: ubuntu-latest

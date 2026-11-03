@@ -6,6 +6,30 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The web UI is split into ES modules under `static/js/`, loaded from
+  `main.js` with `<script type="module">`. There is still no build step and the
+  CSP is unchanged. The modules that do not touch the DOM (formatting, the URL
+  hash, sorting, error naming) have unit tests in `test/web/`, which CI runs
+  with `node --test`.
+
+### Fixed
+
+- An account without a default bucket opens its first bucket on load. Boot used
+  to look for the bucket rows before their listing came back, and said to
+  create a bucket.
+- Text without an extension previews in any directory: `ext()` read the whole
+  key, so `dir/Dockerfile` only previewed at the bucket root. `README` and
+  `LICENSE` count as text.
+- The text preview reads the first 200 KB with a `Range` request instead of
+  downloading the whole object.
+- A failed or cancelled upload refreshes the list, so the files that did go up
+  show, and says how many finished. A dropped folder is skipped and named
+  instead of failing with a bare 网络错误.
+- A prefix jump survives a refresh: `#/acct/bucket/many/shard_03?` is the
+  partial prefix, and links without the `?` still open the directory.
+
 ## [0.5.1] - 2026-11-03
 
 An object key is untrusted input, so the preview dialog renders it as a node,

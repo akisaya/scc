@@ -39,7 +39,9 @@ printf '{"name":"nokeys"}' > "$T/acct-nokeys.json"
 printf '{"from_bucket":"%s","from_key":"docs/hello.txt","to_key":"docs/renamed.txt"}' "$B" > "$T/copy.json"
 
 check "index served" "1" "$(curl -s "$BASE/" | grep -c 'id="rows"')"
-check "app.js served" "200" "$(code "$BASE/static/app.js")"
+check "index loads main.js as a module" "1" "$(curl -s "$BASE/" | grep -c 'type="module" src="/static/js/main.js"')"
+check "main.js served" "200" "$(code "$BASE/static/js/main.js")"
+check "modules served as javascript" "1" "$(curl -s -o /dev/null -w '%{content_type}' "$BASE/static/js/state.js" | grep -c javascript)"
 check "theme bootstrap served" "200" "$(code "$BASE/static/theme.js")"
 check "accounts listed" "1" "$(curl -s "$BASE/api/accounts" | grep -c '"name":"local"')"
 

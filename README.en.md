@@ -224,7 +224,8 @@ internal/cli/            command parsing and the shared target resolution
 internal/config/         YAML load/save, validation, secret indirection
 internal/s3x/            AWS SDK client, listing/get/put/copy/delete, error hints
 internal/web/            HTTP API, request logging, embedded UI
-internal/web/static/     index.html, app.js, style.css, theme.js (no build step)
+internal/web/static/     index.html, style.css, theme.js; js/ holds the UI as ES modules, entry main.js (no build step)
+test/web/                unit tests for the frontend modules that do not touch the DOM (node --test)
 scripts/                 release-notes.sh: CHANGELOG section -> GitHub Release body
 test/                    end-to-end scripts against a real endpoint; test/mock/ is the local mock and seed data
 ```
@@ -232,6 +233,7 @@ test/                    end-to-end scripts against a real endpoint; test/mock/ 
 ```bash
 go test ./...
 go vet ./...
+node --test 'test/web/*.test.js'   # frontend unit tests, Node 22+
 
 # end-to-end tests; any S3-compatible endpoint works (moto, MinIO, ...)
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 ./test/e2e-cli.sh
@@ -250,7 +252,7 @@ scc ls mock:/ && scc web
 
 The seed data covers every preview branch (image / video / audio / PDF / text / no-preview), a 250-object directory for paging, deep prefixes, CJK and special-character keys, and a large object for `Range` requests. `--reset` drops and reseeds, `--server-only` starts the mock without data.
 
-CI runs `gofmt`, `go vet`, `go test -race`, a syntax check of `app.js`, and both end-to-end scripts against an S3 mock (`moto`). Pushing a tag such as `v0.1.0` builds binaries for macOS, Linux and Windows, attaches them to a GitHub Release and uses the matching section of `CHANGELOG.md` as the release notes.
+CI runs `gofmt`, `go vet`, `go test -race`, a syntax check and unit tests of the frontend modules, and both end-to-end scripts against an S3 mock (`moto`). Pushing a tag such as `v0.1.0` builds binaries for macOS, Linux and Windows, attaches them to a GitHub Release and uses the matching section of `CHANGELOG.md` as the release notes.
 
 ## Limitations
 

@@ -223,7 +223,8 @@ internal/cli/            命令解析与路径解析（默认桶逻辑在这里�
 internal/config/         YAML 读写、校验、密钥环境变量替换
 internal/s3x/            AWS SDK 客户端、列目录/读写/拷贝/删除、错误提示
 internal/web/            HTTP API、请求日志、内嵌界面
-internal/web/static/     index.html、app.js、style.css、theme.js（无构建步骤）
+internal/web/static/     index.html、style.css、theme.js；js/ 下是界面的 ES 模块，入口 main.js（无构建步骤）
+test/web/                不碰 DOM 的前端模块的单测（node --test）
 scripts/                 release-notes.sh：把 CHANGELOG 段落转成 Release 正文
 test/                    针对真实 endpoint 的端到端脚本；test/mock/ 是本地 mock 与演示数据
 ```
@@ -231,6 +232,7 @@ test/                    针对真实 endpoint 的端到端脚本；test/mock/ �
 ```bash
 go test ./...
 go vet ./...
+node --test 'test/web/*.test.js'   # 前端单测，需要 Node 22+
 
 # 端到端测试；支持任意 S3 兼容 endpoint（moto、MinIO 等）
 SCC_TEST_ENDPOINT=http://127.0.0.1:9000 ./test/e2e-cli.sh
@@ -249,7 +251,7 @@ scc ls mock:/ && scc web
 
 端到端脚本会自动创建带随机后缀的桶，覆盖两种路径语义（有默认桶和无默认桶的账号），并在 endpoint 不可达时立即给出明确提示。
 
-CI 会运行 `gofmt`、`go vet`、`go test -race`、`app.js` 语法检查，以及针对 S3 mock（`moto`）的两套端到端脚本。推送 `v0.1.0` 等 tag 时会构建 macOS / Linux / Windows 二进制并附加到 GitHub Release，同时使用 `CHANGELOG.md` 中对应段落作为发布说明。
+CI 会运行 `gofmt`、`go vet`、`go test -race`、前端模块的语法检查与单测，以及针对 S3 mock（`moto`）的两套端到端脚本。推送 `v0.1.0` 等 tag 时会构建 macOS / Linux / Windows 二进制并附加到 GitHub Release，同时使用 `CHANGELOG.md` 中对应段落作为发布说明。
 
 ## 限制
 
