@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-03
+
+The web UI works from the keyboard and on a phone, and its code is split into
+ES modules with unit tests, still without a build step.
+
 ### Changed
 
 - The web UI is split into ES modules under `static/js/`, loaded from
