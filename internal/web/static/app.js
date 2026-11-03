@@ -83,7 +83,9 @@ const VIDEO = ["mp4", "webm", "mov", "m4v", "ogv"];
 const AUDIO = ["mp3", "wav", "ogg", "flac", "m4a", "aac"];
 const TEXT = ["txt", "md", "json", "js", "mjs", "ts", "css", "html", "xml", "yaml", "yml",
   "toml", "ini", "conf", "log", "csv", "tsv", "sh", "go", "py", "rs", "java", "c", "h",
-  "sql", "env", "gitignore", "dockerfile", "makefile"];
+  "sql", "env", "gitignore", "dockerfile", "makefile", "readme", "license"];
+// how much of a text object the preview reads; the rest stays on the server
+const TEXT_PREVIEW_BYTES = 200000;
 
 async function api(path, opts = {}) {
   let res;
@@ -288,8 +290,15 @@ document.addEventListener("keydown", (ev) => {
 
 /* ---------- formatting ---------- */
 
-const ext = (k) => (k.split(".").pop() || "").toLowerCase();
 const base = (k) => k.slice(k.lastIndexOf("/") + 1);
+// The extension of the base name only: a dot in a directory ("v1.2/Makefile")
+// is not an extension. A name with no dot ("Dockerfile") counts as its own
+// extension, which is how TEXT lists those.
+const ext = (k) => {
+  const name = base(k).toLowerCase();
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i + 1) : name;
+};
 const dirOf = (k) => k.slice(0, k.lastIndexOf("/") + 1);
 
 function fmtSize(n) {
@@ -321,8 +330,13 @@ const fmtFull = (t) => {
 
 /* ---------- accounts ---------- */
 
+// bucketLists holds each account's in-flight bucket listing, so boot can wait for
+// the one it needs without holding the sidebar back for the slow ones.
+const bucketLists = new Map();
+
 async function loadAccounts() {
   state.accounts = await api("/api/accounts");
+  bucketLists.clear();
   const box = $("#accounts");
   box.innerHTML = "";
   if (!state.accounts.length) {
@@ -347,13 +361,14 @@ async function loadAccounts() {
     block.append(list);
     box.append(block);
     // not awaited: a slow endpoint should not keep the next account off screen
-    loadBuckets(a, list);
+    bucketLists.set(a.name, loadBuckets(a, list));
   }
 }
 
 // loadBuckets fills one account's bucket list. The block is already on screen
 // while the endpoint is probed, which can take seconds when it is unreachable:
-// the SDK retries three times before it gives up.
+// the SDK retries three times before it gives up. Resolves to the bucket names,
+// or null when the listing failed.
 async function loadBuckets(a, list) {
   list.replaceChildren(el("div", "acct-note", "读取桶列表…"));
   let buckets;
@@ -365,7 +380,7 @@ async function loadBuckets(a, list) {
       // the table may be showing the same outage; retry it in the same click
       if (state.acct === a.name && $(".table-wrap").classList.contains("failed")) load();
     }));
-    return;
+    return null;
   }
   list.replaceChildren();
   for (const b of buckets) {
@@ -387,12 +402,21 @@ async function loadBuckets(a, list) {
     row.onclick = () => openBucket(a.name, b, "");
     list.append(row);
   }
+  // A default bucket missing from the listing is either scoped credentials that
+  // cannot list buckets, or a bucket that is gone; only opening it can tell.
+  // It gets the same data attributes so it highlights like any other row.
   if (a.default_bucket && !buckets.includes(a.default_bucket)) {
     const row = el("div", "bucket");
+    row.dataset.acct = a.name;
+    row.dataset.bucket = a.default_bucket;
+    row.title = "默认桶，不在桶列表里";
     row.append(icon(ICON.bucket), el("span", "name", `${a.default_bucket} (默认)`));
     row.onclick = () => openBucket(a.name, a.default_bucket, "");
     list.append(row);
   }
+  // a deep link may have opened this bucket before its row existed
+  paintActive();
+  return buckets;
 }
 
 // explainErr names the cause in one line. It returns null for anything it does
@@ -462,19 +486,33 @@ function paintActive() {
 }
 
 // The current location lives in the URL hash, so refresh and back/forward work.
+// A directory is written without its trailing slash (#/acct/bucket/a/b). A
+// partial prefix from the search box ("many/shard_03") gets a trailing "?",
+// otherwise a refresh would reopen it as the directory many/shard_03/. Keys can
+// never produce a bare "?": encodeURIComponent escapes it inside a segment.
 function stateHash() {
   const segs = [state.acct, state.bucket];
   const parts = state.prefix.split("/").filter(Boolean);
-  return "#/" + [...segs, ...parts].map(encodeURIComponent).join("/") + (parts.length ? "" : "/");
+  const partial = state.prefix !== "" && !state.prefix.endsWith("/");
+  return "#/" + [...segs, ...parts].map(encodeURIComponent).join("/") +
+    (parts.length ? "" : "/") + (partial ? "?" : "");
 }
 
 function parseHash() {
-  const raw = location.hash.replace(/^#\/?/, "");
+  let raw = location.hash.replace(/^#\/?/, "");
+  const partial = raw.endsWith("?");
+  if (partial) raw = raw.slice(0, -1);
   if (!raw) return null;
-  const segs = raw.split("/").filter(Boolean).map(decodeURIComponent);
+  let segs;
+  try {
+    segs = raw.split("/").filter(Boolean).map(decodeURIComponent);
+  } catch {
+    return null; // a hand-edited hash with a broken %-escape
+  }
   if (segs.length < 2) return null;
   const [acct, bucket, ...rest] = segs;
-  return { acct, bucket, prefix: rest.length ? rest.join("/") + "/" : "" };
+  const prefix = rest.length ? rest.join("/") + (partial ? "" : "/") : "";
+  return { acct, bucket, prefix };
 }
 
 function applyHash() {
@@ -923,15 +961,21 @@ function preview(key) {
     body.append(frame);
   } else if (TEXT.includes(e)) {
     body.append(el("pre", null, "加载中…"));
-    fetch(rawUrl(key))
+    // Only the head is fetched: a 2 GB log used to download in full just to show
+    // its first 200 KB. No Range when the object is small or its size unknown,
+    // since S3 answers a Range on an empty object with InvalidRange.
+    const big = obj && obj.Size > TEXT_PREVIEW_BYTES;
+    const opts = big ? { headers: { Range: `bytes=0-${TEXT_PREVIEW_BYTES - 1}` } } : {};
+    fetch(rawUrl(key), opts)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.text();
       })
       .then((t) => {
-        const cut = t.slice(0, 200000);
-        const pre = el("pre", null, cut + (t.length > cut.length ? "\n\n… (已截断)" : ""));
-        body.replaceChildren(pre);
+        const cut = t.slice(0, TEXT_PREVIEW_BYTES);
+        const more = big || t.length > cut.length;
+        const note = more ? `\n\n… (已截断，只显示前 ${fmtSize(TEXT_PREVIEW_BYTES)}；完整内容请下载)` : "";
+        body.replaceChildren(el("pre", null, cut + note));
       })
       .catch((err) => body.replaceChildren(el("div", "err", `读取失败：${err.message}`)));
   } else {
@@ -1160,7 +1204,9 @@ async function newFolder() {
 
 const uploadKey = (f) => state.prefix + f.name;
 
-async function uploadFiles(files) {
+// note is appended to the final message; the drop handler uses it to say which
+// folders it left out, since the one toast slot would otherwise overwrite it.
+async function uploadFiles(files, note = "") {
   if (!state.acct || !state.bucket || !files.length) return;
   const targets = files.map(uploadKey);
   const loaded = targets.filter((k) => state.objectKeys.has(k));
@@ -1175,16 +1221,21 @@ async function uploadFiles(files) {
   let done = 0;
   let cancelled = false;
   let cur = null;
+  // the files that did go up must show in the list however the run ends
+  const halt = (msg) => {
+    flash(msg + note, true);
+    if (done) load();
+  };
   const stop = () => {
     cancelled = true;
     if (cur) cur.abort();
     clearToast();
-    flash(`已取消上传：完成 ${done}/${total}`, true);
+    halt(`已取消上传：完成 ${done}/${total}`);
   };
   const next = () => {
     if (cancelled) return;
     if (done >= total) {
-      flash(`已上传 ${total} 个文件` + (unchecked ? ` · 其中 ${unchecked} 个未做同名检查` : ""));
+      flash(`已上传 ${total} 个文件` + (unchecked ? ` · 其中 ${unchecked} 个未做同名检查` : "") + note);
       load();
       return;
     }
@@ -1203,10 +1254,10 @@ async function uploadFiles(files) {
         done++;
         next();
       } else {
-        flash(`上传失败 ${file.name}: ${xhr.responseText || xhr.status}`, true);
+        halt(`上传失败 ${file.name}（已完成 ${done}/${total}）: ${xhr.responseText || xhr.status}`);
       }
     };
-    xhr.onerror = () => { if (!cancelled) flash(`上传失败 ${file.name}: 网络错误`, true); };
+    xhr.onerror = () => { if (!cancelled) halt(`上传失败 ${file.name}（已完成 ${done}/${total}）: 网络错误`); };
     xhr.send(file);
   };
   showBar(`上传 ${files[0].name} (1/${total})`, 0, stop);
@@ -1344,8 +1395,20 @@ document.addEventListener("drop", (ev) => {
   dragDepth = 0;
   dropzone.hidden = true;
   if (!dragFiles(ev) || !state.bucket) return;
-  const files = [...ev.dataTransfer.files];
-  if (files.length) uploadFiles(files);
+  // A dropped folder arrives as one unreadable File; uploading it ended in a bare
+  // 网络错误. Folders are left out and named instead.
+  const items = [...ev.dataTransfer.items].filter((it) => it.kind === "file");
+  const files = [];
+  const folders = [];
+  for (const it of items) {
+    const entry = it.webkitGetAsEntry && it.webkitGetAsEntry();
+    const f = it.getAsFile();
+    if (entry && entry.isDirectory) folders.push(entry.name);
+    else if (f) files.push(f);
+  }
+  const note = folders.length ? ` · 已跳过文件夹 ${folders.join("、")}（暂不支持上传文件夹）` : "";
+  if (files.length) uploadFiles(files, note);
+  else if (folders.length) flash(note.replace(/^ · /, ""), true);
 });
 
 /* ---------- boot ---------- */
@@ -1353,16 +1416,27 @@ document.addEventListener("drop", (ev) => {
 window.addEventListener("popstate", applyHash);
 window.addEventListener("hashchange", applyHash);
 
-loadAccounts().then(() => {
+loadAccounts().then(async () => {
   if (applyHash()) return; // deep link wins
   const a = state.accounts.find((x) => x.default_bucket) || state.accounts[0];
   if (!a) return;
-  const b = a.default_bucket || (document.querySelector(`.bucket[data-acct="${a.name}"]`)?.dataset.bucket);
-  if (b) {
-    openBucket(a.name, b, "");
+  if (a.default_bucket) {
+    openBucket(a.name, a.default_bucket, "");
+    return;
+  }
+  // no default: the first listed bucket, once that account's listing is in
+  const buckets = await bucketLists.get(a.name);
+  if (state.bucket || location.hash) return; // the user got somewhere meanwhile
+  const empty = $("#empty");
+  if (buckets && buckets.length) {
+    openBucket(a.name, buckets[0], "");
+  } else if (buckets) {
+    empty.hidden = false;
+    empty.textContent = `点 ${a.name} 右侧的 ＋ 新建桶，或从命令行运行 scc mb ${a.name}://bucket`;
   } else {
-    $("#empty").hidden = false;
-    $("#empty").textContent = `点 ${a.name} 右侧的 ＋ 新建桶，或从命令行运行 scc mb ${a.name}://bucket`;
+    // the sidebar already shows why the listing failed, with a retry
+    empty.hidden = false;
+    empty.textContent = `列不出 ${a.name} 的桶，原因见左侧`;
   }
 }).catch((e) => {
   // without the account list the page has nothing to show; say why instead of
