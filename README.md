@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="internal/web/static/logo.svg" width="84" alt="scc logo">
+  <img src="internal/web/static/logo.svg" width="64" alt="scc logo">
 
   # scc
 
@@ -12,7 +12,7 @@
   [功能](#功能) • [安装](#安装) • [开始使用](#开始使用) • [路径语法](#路径语法) • [命令行](#命令行) • [配置](#配置) • [文档](#文档)
 </div>
 
-`scc` 支持在浏览器或终端中浏览任何 S3 兼容存储，多账号凭证保存在一个本地 YAML 文件中，除二进制外无需部署其他组件：没有服务端状态，也没有数据库
+`scc(S3 Compatible Client)` 支持在浏览器或终端中浏览任何 S3 兼容存储，多账号凭证保存在一个本地 YAML 文件中，除二进制外无需部署其他组件：没有服务端状态，也没有数据库
 
 ## 功能
 
