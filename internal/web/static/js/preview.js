@@ -139,6 +139,17 @@ function noPreview(key, obj) {
   const bits = [base(key)];
   if (obj) bits.push(fmtSize(obj.Size));
   box.append(el("div", "meta", bits.join(" · ")));
-  box.append(el("div", "meta", "用上方「下载」保存到本地，或「新标签打开」直接取原始内容"));
+  // the header's icon buttons have no text, so the card names the two ways out
+  const dl = el("a", "btn btn-primary");
+  dl.href = rawUrl(key, true);
+  dl.append(icon(ICON.download), "下载");
+  const open = el("a", "btn btn-secondary");
+  open.href = rawUrl(key);
+  open.target = "_blank";
+  open.rel = "noopener";
+  open.append(icon(ICON.external), "新标签打开");
+  const acts = el("div", "acts");
+  acts.append(dl, open);
+  box.append(acts);
   return box;
 }

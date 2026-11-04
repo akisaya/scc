@@ -46,14 +46,20 @@
       <button id="refresh" class="icon-btn" title="刷新" aria-label="刷新">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4.5V10h-5.5"/></svg>
       </button>
-      <button id="newfolder" class="ghost" title="在当前目录新建文件夹" type="button">新建文件夹</button>
+      <button id="newfolder" class="btn-secondary" title="在当前目录新建文件夹" type="button">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM12 10.5v5M9.5 13h5"/></svg>
+        新建文件夹
+      </button>
       <button id="more" class="icon-btn narrow-only" type="button" title="更多操作"
               aria-label="更多操作" aria-haspopup="menu" aria-expanded="false">⋯</button>
       <div id="moremenu" class="menu" role="menu" aria-label="更多操作" hidden>
         <button type="button" role="menuitem" data-act="refresh">刷新</button>
         <button type="button" role="menuitem" data-act="newfolder">新建文件夹</button>
       </div>
-      <label class="btn btn-primary">上传<input id="upload" type="file" multiple hidden></label>
+      <label class="btn btn-primary">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0 4 4m-4-4L8 8M5 19h14"/></svg>
+        上传<input id="upload" type="file" multiple hidden>
+      </label>
     </div>
   </header>
 
@@ -111,9 +117,16 @@
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
           </button>
         </div>
-        <a id="mdownload" class="btn btn-primary">下载</a>
-        <a id="mopen" class="btn ghost" target="_blank" rel="noopener">新标签打开</a>
-        <button id="mclose" class="ghost" type="button">关闭</button>
+        <a id="mdownload" class="btn icon-btn" title="下载" aria-label="下载">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+        </a>
+        <a id="mopen" class="btn icon-btn" target="_blank" rel="noopener" title="新标签打开" aria-label="新标签打开">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+        </a>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="mclose" class="icon-btn" type="button" title="关闭（Esc）" aria-label="关闭">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
       </div>
     </div>
     <div id="mbody"></div>

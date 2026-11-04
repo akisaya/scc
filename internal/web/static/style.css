@@ -3,12 +3,14 @@
   --radius: 12px;
   --radius-sm: 8px;
   /* Five sizes. They replace nine (10.5px to 15px) that differed by half a
-     pixel without meaning anything different. */
-  --fs-2xs: 11px;   /* table headers, raw error text */
-  --fs-xs: 12px;    /* captions, hints, secondary lines */
-  --fs-sm: 13px;    /* controls, dialogs, toasts */
-  --fs-md: 14px;    /* body, table rows, sidebar */
-  --fs-lg: 15px;    /* brand, dialog glyphs */
+     pixel without meaning anything different. In rem, so a larger default font
+     size in the browser settings scales the text; at the usual 16px they are
+     the pixel sizes in the comments. */
+  --fs-2xs: .6875rem; /* 11px: table headers, raw error text */
+  --fs-xs: .75rem;    /* 12px: captions, hints, secondary lines */
+  --fs-sm: .8125rem;  /* 13px: controls, dialogs, toasts */
+  --fs-md: .875rem;   /* 14px: body, table rows, sidebar */
+  --fs-lg: .9375rem;  /* 15px: brand, dialog glyphs */
   /* the left and right edge of the header, the selection bar and the table */
   --gutter: 18px;
   --font: ui-sans-serif, -apple-system, "SF Pro Text", "PingFang SC", "Segoe UI", system-ui, sans-serif;
@@ -49,8 +51,10 @@
   --sep: #a3aec0;
   --text: #131922;
   --muted: #657085;
-  --accent: #2563eb;
-  --accent-soft: rgb(37 99 235 / .11);
+  /* a shade under #2563eb: on --accent-soft (the active bucket) that one was
+     4.44:1, just short of the 4.5:1 text needs */
+  --accent: #1f5ce0;
+  --accent-soft: rgb(31 92 224 / .11);
   --on-accent: #ffffff;
   --danger: #dc2626;
   --on-danger: #ffffff;
@@ -112,6 +116,7 @@ button, .btn {
   font-size: var(--fs-sm);
   cursor: pointer;
   white-space: nowrap;
+  text-decoration: none;
   transition: background .15s ease, border-color .15s ease, color .15s ease, opacity .15s ease;
 }
 button:hover, .btn:hover { background: var(--surface-3); border-color: var(--border-strong); }
@@ -133,9 +138,21 @@ button:disabled { opacity: .45; cursor: default; }
 .ghost:hover { background: var(--surface-2); border-color: transparent; color: var(--text); }
 .ghost.danger:hover { color: var(--danger); background: color-mix(in oklab, var(--danger) 12%, transparent); }
 
+/* the outlined button beside a primary one. As .ghost, 新建文件夹 had no edge
+   and read as a stray label; the plain button's --surface-2 fill is all but
+   the header's own colour, so it needs the stronger border to stand out. */
+.btn-secondary {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  font-weight: 500;
+}
+.btn-secondary:hover { background: var(--surface-2); }
+
+/* 32px like the search box and the buttons beside it */
 .icon-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   background: transparent;
   border-color: transparent;
@@ -195,6 +212,7 @@ aside {
 .brand #theme { margin-left: auto; }
 
 .acct { margin-top: 12px; }.acct-head { display: flex; align-items: center; gap: 2px; padding: 0 4px 4px; }
+/* the account name as the user typed it: uppercase turned "minio" into MINIO */
 .acct-name {
   flex: 1;
   overflow: hidden;
@@ -202,12 +220,12 @@ aside {
   white-space: nowrap;
   font-size: var(--fs-xs);
   font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
   color: var(--text);
 }
-.acct-add { width: 22px; height: 22px; padding: 0; border: 0; background: transparent; color: var(--muted); opacity: .55; font-size: var(--fs-md); }
-.acct-head:hover .acct-add, .acct-add:focus-visible { opacity: 1; background: var(--surface-2); color: var(--text); }
+/* 24px is the smallest target WCAG 2.2 allows; full --muted at rest, since
+   the .55 it used to fade to was 2.2:1 on white */
+.acct-add { width: 24px; height: 24px; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: var(--fs-md); }
+.acct-head:hover .acct-add, .acct-add:focus-visible { background: var(--surface-2); color: var(--text); }
 
 .bucket {
   display: flex;
@@ -239,8 +257,8 @@ aside {
 .bucket-link:focus-visible { outline: none; box-shadow: inset var(--ring); }
 .bucket .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bucket .del {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -379,7 +397,7 @@ aside {
 .account-form label.row { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: var(--fs-sm); }
 .account-form .form-err { min-height: 1.2em; color: var(--danger); font-size: var(--fs-xs); white-space: pre-wrap; }
 .account-form .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.account-form .field-hint { color: var(--muted); opacity: .8; }
+.account-form .field-hint { color: var(--muted); }
 
 /* ---------- main ---------- */
 main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -481,7 +499,7 @@ nav .sep {
 .search input:focus { outline: none; box-shadow: none; }
 .search input::placeholder { color: var(--muted); }
 .search input::-webkit-search-cancel-button { display: none; }
-.search .clear { width: 22px; height: 22px; font-size: var(--fs-lg); }
+.search .clear { width: 24px; height: 24px; font-size: var(--fs-lg); }
 
 .menu {
   position: absolute;
@@ -558,8 +576,6 @@ thead th {
   background: var(--bg);
   font-size: var(--fs-2xs);
   font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
   text-align: left;
   color: var(--muted);
 }
@@ -581,8 +597,6 @@ thead th.act, tbody td.act { text-align: right; padding-right: var(--gutter); }
   font: inherit;
   font-size: var(--fs-2xs);
   font-weight: 600;
-  letter-spacing: inherit;
-  text-transform: inherit;
   cursor: pointer;
 }
 .sort:hover { background: none; color: var(--text); }
@@ -733,7 +747,7 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
   position: absolute;
   top: 6px;
   right: 6px;
-  height: 22px;
+  height: 24px;
   padding: 0 7px;
   border: 0;
   border-radius: 6px;
@@ -821,9 +835,11 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
 #modal .head .title { flex: 1; min-width: 0; display: grid; gap: 2px; }
 #modal .head .meta { font-size: var(--fs-xs); color: var(--muted); }
 #modal .head #mtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); }
-#modal .head-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+/* every action is the same icon button as the pager arrows; the divider keeps
+   关闭 apart from what acts on the file */
+#modal .head-actions { display: flex; align-items: center; gap: 2px; flex: none; }
 #modal .head-actions[hidden] { display: none; }
-#modal .head-actions .btn { height: 30px; font-size: var(--fs-xs); text-decoration: none; }
+#modal .head-actions .divider { width: 1px; height: 18px; margin: 0 6px; background: var(--border-strong); }
 #modal .pager { display: flex; align-items: center; gap: 2px; margin-right: 6px; }
 #modal .pager .pos { min-width: 44px; text-align: center; color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 #mbody { padding: 16px; overflow: auto; }
@@ -849,7 +865,8 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
   text-align: center;
   color: var(--muted);
 }
-#mbody .no-preview .ico { width: 34px; height: 34px; opacity: .55; }
+#mbody .no-preview > .ico { width: 34px; height: 34px; opacity: .55; }
+#mbody .no-preview .acts { display: flex; gap: 8px; margin-top: 8px; }
 #mbody .no-preview strong { color: var(--text); font-size: var(--fs-md); font-weight: 500; }
 #mbody .no-preview .meta { font-size: var(--fs-xs); color: var(--muted); }
 #mbody .err { color: var(--danger); font-size: var(--fs-sm); }

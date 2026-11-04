@@ -6,6 +6,27 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- 新建文件夹 is an outlined button with a folder icon, and 上传 has an upload
+  icon. As a borderless grey label 新建文件夹 did not read as a button.
+- The preview header's 下载, 新标签打开 and 关闭 are icon buttons like the pager
+  arrows. A file that cannot be previewed shows 下载 and 新标签打开 as buttons
+  in the dialog body instead of pointing at the header.
+- Font sizes are in rem, so a larger default font size in the browser settings
+  scales the text.
+- Account names and table headers are no longer uppercased: the transform
+  turned an account named minio into MINIO and did nothing for the Chinese
+  headers.
+
+### Fixed
+
+- Text contrast reaches WCAG AA: the light theme's accent is a shade darker
+  (the active bucket was 4.44:1), and the account ＋ no longer fades to 2.2:1
+  at rest.
+- The account ＋, the bucket delete, the search clear and the upload cancel are
+  24px, the smallest target WCAG 2.2 allows.
+
 ## [0.6.0] - 2026-11-03
 
 The web UI works from the keyboard and on a phone, and its code is split into
