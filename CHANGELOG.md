@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-04
+
+The toolbar and preview buttons share one style, and the low-contrast text and
+undersized targets in the web UI are fixed.
+
 ### Changed
 
 - 新建文件夹 is an outlined button with a folder icon, and 上传 has an upload
