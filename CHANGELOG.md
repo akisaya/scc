@@ -6,8 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-05
+
+The README is a short front page now, with the full reference split into three
+documents under docs/. The logo is an abstract scc and both UI screenshots show
+the new mark.
+
 ### Changed
 
+- The README keeps only what a first-time reader needs; the command, web and
+  development reference lives in docs/cli.md, docs/web.md and
+  docs/development.md. The hand-maintained English translation is gone.
 - The logo is an abstract scc now: two tangent C-shaped arcs whose combined
   stroke traces an S, in white on a deeper blue-to-violet tile. The old badge
   showed a padlock and said nothing about the name.
