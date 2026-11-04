@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The logo is an abstract scc now: two tangent C-shaped arcs whose combined
+  stroke traces an S, in white on a deeper blue-to-violet tile. The old badge
+  showed a padlock and said nothing about the name.
+
 ## [0.6.1] - 2026-11-04
 
 The toolbar and preview buttons share one style, and the low-contrast text and
