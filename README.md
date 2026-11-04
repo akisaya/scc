@@ -3,7 +3,7 @@
 
   # scc
 
-  *一个小巧的 S3 兼容文件浏览器 —— 单个二进制，同时提供网页界面与命令行*
+  *`SCC(S3 Compatible Client)` 支持在浏览器或终端中浏览任何 S3 兼容存储*
 
   [![Go](https://img.shields.io/badge/Go-%3E%3D1.24-00add8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
   [![单文件部署](https://img.shields.io/badge/%E9%83%A8%E7%BD%B2-%E5%8D%95%E4%B8%AA%E4%BA%8C%E8%BF%9B%E5%88%B6-2ea043?style=flat-square)](#%E5%AE%89%E8%A3%85)
@@ -11,8 +11,6 @@
 
   [功能](#功能) • [安装](#安装) • [开始使用](#开始使用) • [路径语法](#路径语法) • [命令行](#命令行) • [配置](#配置) • [文档](#文档)
 </div>
-
-`scc(S3 Compatible Client)` 支持在浏览器或终端中浏览任何 S3 兼容存储，多账号凭证保存在一个本地 YAML 文件中，除二进制外无需部署其他组件：没有服务端状态，也没有数据库
 
 ## 功能
 
