@@ -1,0 +1,19 @@
+docs/cli.md
+  s_7f3b26424b4fae::t_1e21289efb935b 3,5,7-51,55,57-59,61,63,65-70,72-85,93-96,98-99,101,103,105,107,110-111,113-117,119-131,134,136-245,251-260,262,266,290,292-293,295-296,298,300,302,304,307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.52-trip",
+  "base_commit_sha": "856c669eb0a04ca9bcd68a398987fb10b6f219b7",
+  "prompts": {},
+  "sessions": {
+    "s_7f3b26424b4fae": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ab09-a246-7b81-812a-ddb6b21c05ba",
+        "model": "deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
