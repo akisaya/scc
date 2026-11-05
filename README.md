@@ -78,7 +78,7 @@ scc <command> [args]
 | `accounts list` / `accounts rm <name>` | 列出账号 / 删除账号 |
 | `use <acct>://bucket` | 把 `bucket` 设为该账号的默认桶（使用 `<acct>:` 清除） |
 | `buckets <acct>` | 列桶，不受默认桶影响 |
-| `ls <acct>:[/prefix]` / `<acct>://bucket[/prefix]` | 列桶、列目录，或列整个前缀 |
+| `ls <acct>:[/prefix]` / `<acct>://bucket[/prefix]` | 列桶或目录；加 `-r` 时递归列整个前缀 |
 | `cat <acct>:/key` / `<acct>://bucket/key` | 把对象写到标准输出 |
 | `cp [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝 |
 | `rm [-r] <acct>:/key` / `<acct>://bucket/key` | 删除一个对象，或删除某个前缀下的全部对象 |
@@ -87,13 +87,23 @@ scc <command> [args]
 | `version` | 打印版本号（由发布构建注入） |
 
 ```bash
-scc ls minio:/reports -n 20             # 递归列出前 20 条
+scc ls -r minio:/reports/ -n 20         # 递归列出前 20 条，输出完整 key
+scc ls minio:/reports/ -n 0 |
+  awk '$1 == "DIR" { n++ } END { print n + 0 }'  # 统计直接子目录数
+scc ls -r minio:/reports/ -n 0 |
+  awk 'END { print NR + 0 }'                     # 统计全部对象数
 scc cp -r ./assets minio:/reports/      # 上传目录
 scc cp -r minio:/reports/2025 ./out     # 下载一个前缀
 scc rm -r minio:/tmp/                   # 删除一个前缀
 ```
 
-完整示例、`cp -r` 的复制语义与终端输出截断规则见 [命令行说明](docs/cli.md)。
+> [!NOTE]
+> 非递归 `ls` 把没有结尾 `/` 的路径当作目录，例如 `minio:/reports/cac` 会查询 `reports/cac/`，不会匹配到 `reports/cache/`。加 `-r` 时则把原始字符串直接作为 S3 `ListObjectsV2` 的 `Prefix`，且不设置 `Delimiter`。
+
+> [!WARNING]
+> 以 S3 为源的 `cp -r` 和 `rm -r` 也使用原始 S3 prefix；要操作一个目录时请保留结尾 `/`。`cat`、普通 `rm` 和非递归 `cp` 则要求完整 key。
+
+完整示例、各命令的 prefix 语义、目录与完整 key 的区别、数量统计、`cp -r` 的复制语义与终端输出截断规则见 [命令行说明](docs/cli.md)。
 
 ## 配置
 
