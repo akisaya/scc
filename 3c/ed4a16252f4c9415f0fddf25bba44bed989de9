@@ -1,0 +1,28 @@
+internal/web/static/style.css
+  s_1b0f1ea9e52888::t_a493fda10c7b04 215,223
+  s_1b0f1ea9e52888::t_b9c91c7e8d7548 219-220
+  s_1b0f1ea9e52888::t_96273f39d18238 212-214,216-217
+internal/web/server.go
+  s_1b0f1ea9e52888::t_c91b640a3e688e 37-41,61
+internal/web/server_test.go
+  s_1b0f1ea9e52888::t_c91b640a3e688e 1-23,25-27
+  s_1b0f1ea9e52888::t_9658d63bcd0f1b 24
+internal/web/static/index.html
+  s_1b0f1ea9e52888::t_96273f39d18238 20-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "3ced4a16252f4c9415f0fddf25bba44bed989de9",
+  "prompts": {},
+  "sessions": {
+    "s_1b0f1ea9e52888": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1aa8b-2c74-7f10-848c-52706cc72809",
+        "model": "deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
