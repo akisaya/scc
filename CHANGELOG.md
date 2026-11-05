@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-11-05
+
+The web sidebar now identifies the running binary, so it is clear which release
+the browser is currently connected to.
+
 ### Added
 
 - The web UI shows the running binary's version beside the scc brand, using the
