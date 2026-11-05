@@ -1,0 +1,19 @@
+CHANGELOG.md
+  s_1b0f1ea9e52888::t_1ce4d237c5ce34 9-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.51-trip",
+  "base_commit_sha": "8ad46e037a05e3ea703bc0192322169c19a88604",
+  "prompts": {},
+  "sessions": {
+    "s_1b0f1ea9e52888": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1aa8b-2c74-7f10-848c-52706cc72809",
+        "model": "deepseek-v4.1-flash[1M]"
+      },
+      "human_author": "akisaya <akikevinsama@gmail.com>"
+    }
+  }
+}
