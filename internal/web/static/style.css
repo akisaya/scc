@@ -209,6 +209,22 @@ aside {
   border-radius: 7px;
   box-shadow: var(--shadow-sm);
 }
+.brand-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.brand .version {
+  min-width: 0;
+  max-width: 14ch;
+  overflow: hidden;
+  color: var(--muted);
+  font: 400 var(--fs-2xs)/1.4 var(--font);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .brand #theme { margin-left: auto; }
 
 .acct { margin-top: 12px; }.acct-head { display: flex; align-items: center; gap: 2px; padding: 0 4px 4px; }
@@ -904,6 +920,7 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
   :root { --gutter: 10px; }
   body { grid-template-columns: 172px 1fr; }
   aside { padding: 10px 8px; }
+  .brand { gap: 6px; padding-left: 2px; padding-right: 2px; }
   header { padding: 10px var(--gutter); gap: 8px; }
   thead th, tbody td { padding-left: 10px; }
   .search { width: 168px; }

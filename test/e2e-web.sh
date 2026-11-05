@@ -13,7 +13,7 @@ export SCC_CONFIG="$T/config.yaml"
 SRV=
 trap 'kill $SRV 2>/dev/null; rm -rf "$T" "$(dirname "$BIN")"' EXIT
 
-go build -o "$BIN" . || exit 1
+go build -ldflags="-X main.version=v0.0.0-e2e" -o "$BIN" . || exit 1
 if ! curl -s -o /dev/null --max-time 3 "$ENDPOINT"; then
   echo "no S3 endpoint at $ENDPOINT (start moto/minio or set SCC_TEST_ENDPOINT)" >&2
   exit 1
@@ -39,6 +39,7 @@ printf '{"name":"nokeys"}' > "$T/acct-nokeys.json"
 printf '{"from_bucket":"%s","from_key":"docs/hello.txt","to_key":"docs/renamed.txt"}' "$B" > "$T/copy.json"
 
 check "index served" "1" "$(curl -s "$BASE/" | grep -c 'id="rows"')"
+check "index shows build version" "1" "$(curl -s "$BASE/" | grep -c '>v0.0.0-e2e</span>')"
 check "index loads main.js as a module" "1" "$(curl -s "$BASE/" | grep -c 'type="module" src="/static/js/main.js"')"
 check "main.js served" "200" "$(code "$BASE/static/js/main.js")"
 check "modules served as javascript" "1" "$(curl -s -o /dev/null -w '%{content_type}' "$BASE/static/js/state.js" | grep -c javascript)"

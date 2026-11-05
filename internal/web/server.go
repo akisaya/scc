@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"io/fs"
 	"log"
@@ -30,8 +31,13 @@ import (
 //go:embed static
 var static embed.FS
 
-func Serve(cfg *config.Config) error {
+func Serve(cfg *config.Config, version string) error {
 	mux := http.NewServeMux()
+
+	index, err := renderIndex(version)
+	if err != nil {
+		return err
+	}
 
 	mux.HandleFunc("GET /api/accounts", handleAccounts)
 	mux.HandleFunc("POST /api/accounts", handleAddAccount)
@@ -51,13 +57,8 @@ func Serve(cfg *config.Config) error {
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(sub)))
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		b, err := static.ReadFile("static/index.html")
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(b)
+		w.Write(index)
 	})
 
 	srv := &http.Server{
@@ -83,6 +84,19 @@ func Serve(cfg *config.Config) error {
 		defer cancel()
 		return srv.Shutdown(ctx)
 	}
+}
+
+const versionPlaceholder = "{{SCC_VERSION}}"
+
+func renderIndex(version string) ([]byte, error) {
+	page, err := static.ReadFile("static/index.html")
+	if err != nil {
+		return nil, err
+	}
+	if version == "" {
+		version = "dev"
+	}
+	return []byte(strings.ReplaceAll(string(page), versionPlaceholder, html.EscapeString(version))), nil
 }
 
 // logRequests prints one line per API call, so a browser-side failure can be

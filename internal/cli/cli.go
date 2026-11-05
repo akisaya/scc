@@ -53,7 +53,7 @@ config file: $SCC_CONFIG, else $XDG_CONFIG_HOME/scc/config.yaml,
              else ~/.config/scc/config.yaml
 `
 
-func Run(args []string) error {
+func Run(args []string, version string) error {
 	if len(args) == 0 {
 		fmt.Print(usageText)
 		return nil
@@ -78,7 +78,7 @@ func Run(args []string) error {
 	case "rb":
 		return rbCmd(rest)
 	case "web":
-		return webCmd(rest)
+		return webCmd(rest, version)
 	case "help", "-h", "--help":
 		fmt.Print(usageText)
 		return nil

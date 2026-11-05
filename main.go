@@ -16,7 +16,7 @@ func main() {
 		fmt.Println("scc", version)
 		return
 	}
-	if err := cli.Run(os.Args[1:]); err != nil {
+	if err := cli.Run(os.Args[1:], version); err != nil {
 		fmt.Fprintln(os.Stderr, "scc:", err)
 		if h := s3x.Hint(err); h != "" {
 			fmt.Fprintln(os.Stderr, "hint:", h)

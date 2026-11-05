@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The web UI shows the running binary's version beside the scc brand, using the
+  same release stamp as `scc version`.
+
 ## [0.6.2] - 2026-11-05
 
 The README is a short front page now, with the full reference split into three
