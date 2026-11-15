@@ -123,13 +123,16 @@ export function render() {
     tr.dataset.key = p;
     if (state.selected.has(p)) tr.className = "sel";
     tr.append(checkCell(p, tr));
-    const td = el("td", "name");
+    // The name is the row header: it labels the size and date beside it, so a
+    // screen reader reading the row knows which file the values belong to.
+    const th = el("th", "name");
+    th.scope = "row";
     const link = locLink(state.acct, state.bucket, p, "name-link");
     link.append(icon(ICON.folder), el("span", "label", name + "/"));
-    td.append(link);
+    th.append(link);
     const act = el("td", "act");
     act.append(actionBtn(ICON.trash, "删除目录及其内容", () => del(p, true), true));
-    tr.append(td, el("td", "num", "-"), el("td", "date", "-"), act);
+    tr.append(th, el("td", "num", "-"), el("td", "date", "-"), act);
     rows.append(tr);
   }
 
@@ -139,13 +142,16 @@ export function render() {
     tr.dataset.key = o.Key;
     if (state.selected.has(o.Key)) tr.className = "sel";
     tr.append(checkCell(o.Key, tr));
-    const td = el("td", "name");
+    const th = el("th", "name");
+    th.scope = "row";
     const open = el("button", "name-link");
     open.type = "button";
     open.title = o.Key;
     open.append(icon(ICON.file), el("span", "label", name));
     open.onclick = () => preview(o.Key);
-    td.append(open);
+    // Narrow screens fold the size and date columns away; this second line is
+    // what keeps them reachable there (display:none above 860px).
+    th.append(open, el("span", "row-meta", `${fmtSize(o.Size)} · ${fmtTime(o.LastModified)}`));
     const date = el("td", "date", fmtTime(o.LastModified));
     date.title = fmtFull(o.LastModified);
     const act = el("td", "act");
@@ -154,7 +160,7 @@ export function render() {
       actionBtn(ICON.rename, "重命名", () => rename(o.Key)),
       actionBtn(ICON.trash, "删除", () => del(o.Key, false), true)
     );
-    tr.append(td, el("td", "num", fmtSize(o.Size)), date, act);
+    tr.append(th, el("td", "num", fmtSize(o.Size)), date, act);
     rows.append(tr);
   }
 

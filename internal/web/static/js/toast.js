@@ -12,6 +12,7 @@ export function hideBar() {
   const bar = $("#progress");
   bar.hidden = true;
   bar.querySelector(".toast-cancel").hidden = true;
+  $("#pbar").value = 0;
 }
 
 // showBar fills the progress card. onCancel is only passed by the upload loop;
@@ -20,7 +21,7 @@ export function hideBar() {
 export function showBar(label, pct, onCancel) {
   const bar = $("#progress");
   bar.hidden = false;
-  bar.querySelector("i").style.width = pct.toFixed(1) + "%";
+  $("#pbar").value = pct;
   bar.querySelector(".lab").textContent = label;
   const cancel = bar.querySelector(".toast-cancel");
   cancel.hidden = !onCancel;
@@ -60,5 +61,15 @@ export function flash(msg, isErr, title) {
   box.append(card);
   while (box.children.length > MAX_MSGS) box.firstElementChild.remove();
   // errors stay until dismissed: they usually need to be read or copied
-  if (!isErr) setTimeout(() => card.remove(), SUCCESS_MS);
+  if (isErr) return;
+  // a message that is about to disappear must not take the keyboard focus with
+  // it: wait while the user is on one of its controls
+  const drop = () => {
+    if (card.contains(document.activeElement)) {
+      setTimeout(drop, SUCCESS_MS / 2);
+      return;
+    }
+    card.remove();
+  };
+  setTimeout(drop, SUCCESS_MS);
 }

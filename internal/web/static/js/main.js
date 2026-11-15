@@ -3,7 +3,6 @@
 import { $ } from "./dom.js";
 import { state } from "./state.js";
 import { errCard } from "./errors.js";
-import { initDialogs } from "./dialogs.js";
 import { initTheme } from "./theme.js";
 import { bucketLists, loadAccounts, initSidebar } from "./sidebar.js";
 import { applyHash, openBucket, initBrowse } from "./browse.js";
@@ -14,7 +13,6 @@ import { initUpload } from "./upload.js";
 import { initToolbar } from "./toolbar.js";
 
 initTheme();
-initDialogs();
 initSidebar();
 initBrowse();
 initTable();

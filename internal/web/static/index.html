@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#1e222a">
 <!-- No inline script and no foreign source. Second layer behind the preview
      dialog's node-by-node rendering: an object key that somehow reached markup
      still cannot drag an inline handler in with it. -->
@@ -14,12 +15,13 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<a class="skip" href="#content">跳到文件列表</a>
 <aside id="sidebar" aria-label="账户与桶">
   <div class="brand">
     <img class="logo" src="/static/logo.svg" width="22" height="22" alt="">
     <div class="brand-title">
       <span>scc</span>
-      <span id="version" class="version" title="scc {{SCC_VERSION}}" aria-label="scc 版本 {{SCC_VERSION}}">{{SCC_VERSION}}</span>
+      <span id="version" class="version" title="scc {{SCC_VERSION}}">{{SCC_VERSION}}</span>
     </div>
     <button id="theme" class="icon-btn" title="切换深色/浅色" aria-label="切换深色/浅色">
       <svg class="ico sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>
@@ -32,6 +34,8 @@
 <div id="scrim" hidden></div>
 
 <main>
+  <!-- The page needs one heading; the app has no visual title to spare. -->
+  <h1 class="sr-only">scc 对象浏览器</h1>
   <header>
     <button id="navtoggle" class="icon-btn drawer-only" type="button" title="账户与桶"
             aria-label="打开账户与桶" aria-controls="sidebar" aria-expanded="false">
@@ -53,11 +57,13 @@
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM12 10.5v5M9.5 13h5"/></svg>
         新建文件夹
       </button>
+      <!-- popovertarget gives the menu light dismiss, Escape, the top layer and
+           an implicit aria-expanded; the browser keeps all of that in sync. -->
       <button id="more" class="icon-btn narrow-only" type="button" title="更多操作"
-              aria-label="更多操作" aria-haspopup="menu" aria-expanded="false">⋯</button>
-      <div id="moremenu" class="menu" role="menu" aria-label="更多操作" hidden>
-        <button type="button" role="menuitem" data-act="refresh">刷新</button>
-        <button type="button" role="menuitem" data-act="newfolder">新建文件夹</button>
+              aria-label="更多操作" popovertarget="moremenu">⋯</button>
+      <div id="moremenu" popover>
+        <button type="button" data-act="refresh">刷新</button>
+        <button type="button" data-act="newfolder">新建文件夹</button>
       </div>
       <label class="btn btn-primary">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0 4 4m-4-4L8 8M5 19h14"/></svg>
@@ -75,18 +81,20 @@
     </div>
   </div>
 
-  <div class="table-wrap">
+  <!-- Focusable so the keyboard can scroll it; the region names what it holds. -->
+  <div class="table-wrap" id="content" tabindex="0" role="region" aria-label="文件列表">
     <table>
+      <caption class="sr-only">当前目录下的文件与文件夹</caption>
       <colgroup>
         <col class="c-check"><col class="c-name"><col class="c-size"><col class="c-date"><col class="c-act">
       </colgroup>
       <thead>
         <tr>
-          <th class="check"><input id="checkall" type="checkbox" aria-label="全选当前列出的项"></th>
-          <th><button class="sort" type="button" data-col="name">名称<i class="arrow" aria-hidden="true"></i></button></th>
-          <th class="num"><button class="sort" type="button" data-col="size">大小<i class="arrow" aria-hidden="true"></i></button></th>
-          <th class="date"><button class="sort" type="button" data-col="date">修改时间<i class="arrow" aria-hidden="true"></i></button></th>
-          <th class="act"><span class="sr-only">操作</span></th>
+          <th class="check" scope="col"><input id="checkall" type="checkbox" aria-label="全选当前列出的项"></th>
+          <th scope="col"><button class="sort" type="button" data-col="name">名称<i class="arrow" aria-hidden="true"></i></button></th>
+          <th class="num" scope="col"><button class="sort" type="button" data-col="size">大小<i class="arrow" aria-hidden="true"></i></button></th>
+          <th class="date" scope="col"><button class="sort" type="button" data-col="date">修改时间<i class="arrow" aria-hidden="true"></i></button></th>
+          <th class="act" scope="col"><span class="sr-only">操作</span></th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -94,69 +102,71 @@
     <div id="empty" class="hint" hidden></div>
   </div>
   <div id="toasts" role="region" aria-label="通知">
+    <!-- Always rendered: a live region that is display:none while empty does not
+         announce its first message, which arrives in the same frame it appears. -->
     <div id="msgs" aria-live="polite"></div>
     <div id="progress" class="toast" hidden>
-      <div class="bar"><i></i></div>
-      <div class="lab" aria-live="polite"></div>
+      <progress id="pbar" max="100" value="0" aria-labelledby="plab"></progress>
+      <div class="lab" id="plab"></div>
       <button class="toast-cancel" type="button" hidden>取消</button>
     </div>
   </div>
 </main>
 
-<div id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mtitle">
-  <div class="box">
-    <div class="head">
-      <div class="title">
-        <span id="mtitle"></span>
-        <span id="mmeta" class="meta"></span>
-      </div>
-      <div class="head-actions">
-        <div class="pager" id="mpager">
-          <button id="mprev" class="icon-btn" type="button" title="上一个（←）" aria-label="上一个文件">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg>
-          </button>
-          <span id="mpos" class="pos" aria-live="polite"></span>
-          <button id="mnext" class="icon-btn" type="button" title="下一个（→）" aria-label="下一个文件">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
-          </button>
-        </div>
-        <a id="mdownload" class="btn icon-btn" title="下载" aria-label="下载">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
-        </a>
-        <a id="mopen" class="btn icon-btn" target="_blank" rel="noopener" title="新标签打开" aria-label="新标签打开">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
-        </a>
-        <span class="divider" aria-hidden="true"></span>
-        <button id="mclose" class="icon-btn" type="button" title="关闭（Esc）" aria-label="关闭">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+<!-- Native modals: the browser owns the backdrop, the top layer, focus
+     containment, Escape, the back gesture and returning focus to the invoker.
+     No role="dialog", no aria-modal, no hand-written focus trap. -->
+<dialog id="modal" aria-labelledby="mtitle" closedby="any">
+  <div class="head">
+    <div class="title">
+      <span id="mtitle"></span>
+      <span id="mmeta" class="meta"></span>
+    </div>
+    <div class="head-actions">
+      <div class="pager" id="mpager">
+        <button id="mprev" class="icon-btn" type="button" title="上一个（←）" aria-label="上一个文件">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg>
+        </button>
+        <span id="mpos" class="pos" aria-live="polite"></span>
+        <button id="mnext" class="icon-btn" type="button" title="下一个（→）" aria-label="下一个文件">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
         </button>
       </div>
+      <a id="mdownload" class="btn icon-btn" title="下载" aria-label="下载">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+      </a>
+      <a id="mopen" class="btn icon-btn" target="_blank" rel="noopener" title="新标签打开" aria-label="新标签打开">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+      </a>
+      <span class="divider" aria-hidden="true"></span>
+      <button id="mclose" class="icon-btn" type="button" title="关闭（Esc）" aria-label="关闭" autofocus>
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
     </div>
-    <div id="mbody"></div>
   </div>
-</div>
+  <div id="mbody" tabindex="0" role="region" aria-label="预览内容"></div>
+</dialog>
 
-<div id="confirm" hidden role="alertdialog" aria-modal="true" aria-labelledby="ctext">
-  <div class="box">
-    <p id="ctext"></p>
-    <div class="actions">
-      <button id="ccancel" class="ghost" type="button">取消</button>
-      <button id="cok" class="btn-danger" type="button">删除</button>
-    </div>
+<dialog id="confirm" aria-labelledby="ctitle" aria-describedby="ctext">
+  <h2 id="ctitle" class="sr-only">请确认</h2>
+  <p id="ctext"></p>
+  <div class="actions">
+    <button id="ccancel" class="ghost" type="button" autofocus>取消</button>
+    <button id="cok" class="btn-danger" type="button">删除</button>
   </div>
-</div>
+</dialog>
 
-<div id="ask" hidden role="dialog" aria-modal="true" aria-labelledby="asktitle">
-  <form class="box" id="askform">
+<dialog id="ask" aria-labelledby="asktitle">
+  <form id="askform">
     <p id="asktitle" class="ask-title"></p>
-    <input id="askinput" type="text" autocomplete="off" spellcheck="false">
+    <input id="askinput" type="text" autocomplete="off" spellcheck="false" aria-describedby="askerr">
     <p id="askerr" class="ask-err" role="alert"></p>
     <div class="actions">
       <button id="askcancel" class="ghost" type="button">取消</button>
       <button id="askok" class="btn-primary" type="submit">确定</button>
     </div>
   </form>
-</div>
+</dialog>
 
 <div id="dropzone" hidden aria-hidden="true">
   <div class="dz">

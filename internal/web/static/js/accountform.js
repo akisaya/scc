@@ -9,15 +9,24 @@ import { loadAccounts } from "./sidebar.js";
 import { openBucket } from "./browse.js";
 import { openModal, closeModal } from "./preview.js";
 
+// One labelled control. The hint is a description (aria-describedby), not part
+// of the label: inside the <label> it would be read as part of the field's name.
 function field(labelText, input, hint) {
-  const l = el("label");
-  l.append(el("span", null, labelText), input);
+  const wrap = el("div", "field");
+  const l = el("label", null, labelText);
+  l.htmlFor = input.id;
+  wrap.append(l, input);
   if (hint) {
-    l.append(el("span", "field-hint", hint));
+    const h = el("span", "field-hint", hint);
+    h.id = input.id + "-hint";
+    input.setAttribute("aria-describedby", h.id);
+    wrap.append(h);
   }
-  return l;
+  return wrap;
 }
 
+// Endpoints and keys are identifiers, not prose: no autocapitalising them on a
+// phone keyboard, no autocorrect, no red underlines.
 function textInput(id, placeholder, value) {
   const i = el("input");
   i.id = id;
@@ -26,6 +35,8 @@ function textInput(id, placeholder, value) {
   i.value = value || "";
   i.autocomplete = "off";
   i.spellcheck = false;
+  i.setAttribute("autocapitalize", "none");
+  i.setAttribute("autocorrect", "off");
   return i;
 }
 
@@ -34,28 +45,34 @@ export function openAccountForm() {
   $("#mmeta").textContent = "";
   // download / open / close belong to the preview; the form has its own 取消
   $("#modal .head-actions").hidden = true;
-  $("#modal").querySelector(".box").classList.add("narrow");
+  $("#modal").classList.add("narrow");
   const body = $("#mbody");
   body.innerHTML = "";
 
   const form = el("form", "account-form");
   const name = textInput("f-name", "minio");
+  name.required = true;
   const endpoint = textInput("f-endpoint", "http://127.0.0.1:9000（留空表示 AWS）");
+  endpoint.inputMode = "url";
   const region = textInput("f-region", "us-east-1", "us-east-1");
   const access = textInput("f-access", "access key id");
+  access.required = true;
   const secret = el("input");
   secret.id = "f-secret";
   secret.type = "password";
   secret.placeholder = "secret access key";
   secret.autocomplete = "new-password";
+  secret.required = true;
   const bucket = textInput("f-bucket", "可选，填了之后 acct: 直接进这个桶");
   const pathRow = el("label", "row");
   const path = el("input");
   path.type = "checkbox";
   path.id = "f-path";
+  pathRow.htmlFor = path.id;
   pathRow.append(path, el("span", null, "path-style 寻址（自建服务通常需要，AWS 不要勾）"));
 
   const err = el("div", "form-err");
+  err.setAttribute("role", "alert");
   const actions = el("div", "form-actions");
   const cancel = el("button", "ghost", "取消");
   cancel.type = "button";
@@ -69,7 +86,7 @@ export function openAccountForm() {
     field("Endpoint", endpoint),
     field("Region", region),
     field("Access Key", access),
-    field("Secret Key", secret),
+    field("Secret Key", secret, "保存在服务端配置文件里，接口不会回传"),
     field("默认桶", bucket),
     pathRow,
     err,
@@ -84,6 +101,10 @@ export function openAccountForm() {
   };
   endpoint.addEventListener("input", syncPath);
   syncPath();
+  // the server's one-liner is about the previous attempt; typing starts a new one
+  form.addEventListener("input", () => {
+    if (err.textContent) err.textContent = "";
+  });
 
   form.onsubmit = async (ev) => {
     ev.preventDefault();

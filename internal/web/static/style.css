@@ -97,6 +97,24 @@ body {
   white-space: nowrap;
 }
 
+/* The sidebar and the toolbar come before the listing on every page; this is
+   the one way past them without a few hundred Tab presses. It stays focusable
+   and in the accessibility tree, just parked above the viewport. */
+.skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 60;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+.skip:focus { transform: none; }
+
 /* button/.btn set display, which would otherwise beat the UA rule for [hidden] */
 [hidden] { display: none !important; }
 
@@ -392,7 +410,8 @@ aside {
 
 /* ---------- account form ---------- */
 .account-form { display: grid; gap: 13px; max-width: 540px; }
-.account-form label { display: grid; gap: 6px; font-size: var(--fs-xs); color: var(--muted); }
+.account-form .field { display: grid; gap: 6px; }
+.account-form .field label { font-size: var(--fs-xs); color: var(--muted); }
 .account-form input:not([type=checkbox]) {
   height: 34px;
   padding: 0 10px;
@@ -401,7 +420,8 @@ aside {
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
-  font-size: var(--fs-md);
+  /* at least 1rem: anything smaller makes iOS zoom the page on focus */
+  font-size: max(1rem, var(--fs-md));
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .account-form input:not([type=checkbox]):focus {
@@ -413,15 +433,15 @@ aside {
 .account-form label.row { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: var(--fs-sm); }
 .account-form .form-err { min-height: 1.2em; color: var(--danger); font-size: var(--fs-xs); white-space: pre-wrap; }
 .account-form .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.account-form .field-hint { color: var(--muted); }
+.account-form .field-hint { color: var(--muted); font-size: var(--fs-xs); }
 
 /* ---------- main ---------- */
 main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 
 header {
   position: relative;
-  /* the overflow menu hangs out of the header; without its own z-index the
-     sticky table header (z-index 1) would paint over the open menu */
+  /* the drawer and the popover menu live above this in their own layers; the
+     header only has to stay above the sticky table header (z-index 1) */
   z-index: 5;
   display: flex;
   align-items: center;
@@ -472,7 +492,19 @@ nav a {
 nav a:hover { background: var(--surface-2); color: var(--text); }
 nav a:focus-visible { outline: none; box-shadow: inset var(--ring); color: var(--text); }
 nav a.cur { color: var(--text); font-weight: 500; }
-nav .sep {
+/* An ordered list, because the order is the hierarchy; the chevron between two
+   items is generated, so it never reaches the accessibility tree as text. */
+nav ol {
+  display: flex;
+  align-items: center;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+nav li { display: flex; align-items: center; flex: none; }
+nav li + li::before {
+  content: "";
   flex: none;
   width: 5px;
   height: 5px;
@@ -512,27 +544,61 @@ nav .sep {
   font: inherit;
   font-size: var(--fs-sm);
 }
+/* iOS zooms the page when a field under 16px takes focus. Only touch needs the
+   larger size: on a desktop pointer it just makes the box's text outgrow the
+   13px controls beside it. */
+@media (pointer: coarse) {
+  .search input { font-size: 1rem; }
+}
 .search input:focus { outline: none; box-shadow: none; }
 .search input::placeholder { color: var(--muted); }
 .search input::-webkit-search-cancel-button { display: none; }
 .search .clear { width: 24px; height: 24px; font-size: var(--fs-lg); }
 
-.menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 15;
+/* ---------- narrow-screen overflow menu ---------- */
+/* A popover and nothing more: the browser handles the top layer, light dismiss,
+   Escape and the trigger's aria-expanded, so none of that is duplicated here. */
+#more { anchor-name: --more; }
+#moremenu {
   min-width: 152px;
+  margin: 6px 0 0;
   padding: 5px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
+  color: var(--text);
   box-shadow: var(--shadow-lg);
+  position-anchor: --more;
+  position-area: block-end span-inline-end;
+  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+  inset: auto;
+}
+/* display only while open: a popover that is display:grid when closed never
+   hides, because an author display beats the UA rule */
+#moremenu:popover-open { display: grid; gap: 2px; }
+/* Browsers without the popover API: js removes the attribute, so this is an
+   ordinary dropdown hanging off the toolbar again. */
+#moremenu:not([popover]) {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 15;
   display: grid;
   gap: 2px;
 }
-.menu[hidden] { display: none; }
-.menu button {
+/* without anchor positioning the UA would centre it in the viewport; pin it
+   under the header instead */
+@supports not (position-anchor: --x) {
+  #moremenu:popover-open {
+    position: fixed;
+    top: 54px;
+    right: var(--gutter);
+    bottom: auto;
+    left: auto;
+    margin: 0;
+  }
+}
+#moremenu button {
   justify-content: flex-start;
   height: 30px;
   padding: 0 10px;
@@ -540,7 +606,7 @@ nav .sep {
   background: transparent;
   font-size: var(--fs-sm);
 }
-.menu button:hover { background: var(--surface-2); }
+#moremenu button:hover { background: var(--surface-2); }
 
 /* visible on narrow screens only; the two buttons it replaces are hidden there */
 .narrow-only { display: none; }
@@ -643,18 +709,23 @@ thead th.act, tbody td.act { text-align: right; padding-right: var(--gutter); }
 .sort.on.desc .arrow::before { opacity: .14; }
 .sort.on.desc .arrow::after { opacity: 1; color: var(--accent); }
 
-tbody td {
+/* The name cell is a row header (th scope=row), so it must look like the other
+   cells instead of the browser's bold, centred th. */
+tbody td,
+tbody th.name {
   height: 38px;
   padding: 0 18px 0 0;
   border-bottom: 1px solid var(--border);
   font-size: var(--fs-md);
+  font-weight: 400;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 tbody tr { transition: background .12s ease; }
-tbody tr:hover td { background: var(--surface-2); }
-tbody tr.sel td { background: var(--accent-soft); }
+tbody tr:hover > * { background: var(--surface-2); }
+tbody tr.sel > * { background: var(--accent-soft); }
 
 /* The name is a link (folder) or button (file) that fills its cell, so the
    click target is as big as the old clickable cell and Tab reaches every row. */
@@ -679,10 +750,21 @@ tbody tr.sel td { background: var(--accent-soft); }
 .name-link:hover { background: none; }
 .name-link:focus-visible { outline: none; box-shadow: inset var(--ring); }
 .name-link .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-td.name .ico { color: var(--muted); }
-tbody tr:hover td.name .ico, tbody tr:focus-within td.name .ico { color: var(--accent); }
-tbody tr:focus-within td { background: var(--surface-2); }
-tbody tr.sel:focus-within td { background: var(--accent-soft); }
+td.name .ico, th.name .ico { color: var(--muted); }
+tbody tr:hover th.name .ico, tbody tr:focus-within th.name .ico { color: var(--accent); }
+tbody tr:focus-within > * { background: var(--surface-2); }
+tbody tr.sel:focus-within > * { background: var(--accent-soft); }
+
+/* The second line under a file name. It only exists where the size and date
+   columns are folded away (see the 860px query); above that the cells carry the
+   same text and this stays display:none, out of the accessibility tree. */
+.row-meta {
+  display: none;
+  padding-left: 25px;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
 
 td.num, th.num { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
 td.date, th.date { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -739,12 +821,37 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
   pointer-events: auto;
 }
 #msgs { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-#msgs:empty { display: none; }
 .toast.err .line { color: var(--danger); }
 .toast .lab { color: var(--muted); }
 .toast .raw { color: var(--muted); font-size: var(--fs-xs); }
-#progress .bar { height: 4px; margin-bottom: 7px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
-#progress .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s ease; }
+/* A real <progress>: role, value and the "x%" announcement come with the
+   element. Styled per the guide, which needs appearance:none and the two
+   vendor pseudo-elements in separate rules (grouping them invalidates both). */
+#progress progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin: 0 0 7px;
+  border: 0 solid;
+  border-radius: 99px;
+  overflow: clip;
+  background: var(--surface-3);
+  color: var(--accent);
+}
+#progress progress::-webkit-progress-bar {
+  border-radius: 99px;
+  background: var(--surface-3);
+}
+#progress progress::-webkit-progress-value {
+  border-radius: 99px;
+  background: var(--accent);
+  transition: inline-size .15s ease;
+}
+#progress progress::-moz-progress-bar {
+  border-radius: 99px;
+  background: var(--accent);
+}
 .toast-close {
   position: absolute;
   top: 5px;
@@ -773,31 +880,34 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
 }
 .toast-cancel:hover { background: var(--surface-2); color: var(--danger); }
 /* keep the bar from running under the button */
+/* the .toast padding leaves room for a close button this card does not have */
+#progress { padding-right: 14px; }
 #progress:has(.toast-cancel:not([hidden])) { padding-right: 56px; }
 
 /* ---------- dialogs ---------- */
 .btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-danger); font-weight: 500; }
 .btn-danger:hover { background: var(--danger); border-color: var(--danger); filter: brightness(1.06); }
 
-#confirm, #ask {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 4vh 6vw;
-  background: rgb(0 0 0 / .5);
-  backdrop-filter: blur(4px);
-}
-#confirm[hidden], #ask[hidden] { display: none; }
-#confirm .box, #ask .box {
-  width: min(420px, 100%);
-  padding: 20px;
+/* The native element is the panel and ::backdrop is the dimmed page, so there
+   is no full-screen overlay to position and no box to re-centre. */
+dialog {
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
+  color: var(--text);
+  font: inherit;
   box-shadow: var(--shadow-lg);
+  overscroll-behavior: contain;
 }
+dialog::backdrop {
+  background: rgb(0 0 0 / .5);
+  /* ::backdrop is not a scroll container by default, so it would ignore
+     overscroll-behavior without this */
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+#confirm, #ask { width: min(420px, 92vw); padding: 20px; }
 #confirm p { margin: 0 0 18px; font-size: var(--fs-md); line-height: 1.55; white-space: pre-wrap; }
 #confirm .actions, #ask .actions { display: flex; justify-content: flex-end; gap: 8px; }
 
@@ -811,7 +921,8 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
-  font-size: var(--fs-md);
+  /* at least 1rem: anything smaller makes iOS zoom the page on focus */
+  font-size: max(1rem, var(--fs-md));
 }
 #ask #askinput:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 #ask .ask-err { margin: 8px 0 0; min-height: 1.2em; color: var(--danger); font-size: var(--fs-xs); }
@@ -819,28 +930,21 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
 
 /* ---------- preview ---------- */
 #modal {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: grid;
-  place-items: center;
-  padding: 4vh 4vw;
-  background: rgb(0 0 0 / .55);
-  backdrop-filter: blur(6px);
+  width: min(1040px, 92vw);
+  max-width: none;
+  max-height: none;
+  overflow: hidden;
+  border-radius: 16px;
 }
-#modal[hidden] { display: none; }
-#modal .box {
+/* display only while open: a dialog that is display:flex when closed never
+   hides, because an author display beats the UA rule */
+#modal[open] {
   display: flex;
   flex-direction: column;
-  width: min(1040px, 100%);
   max-height: 92vh;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
 }
-#modal .box.narrow { width: min(560px, 100%); }
+#modal.narrow[open] { width: min(560px, 92vw); }
+#modal::backdrop { background: rgb(0 0 0 / .55); backdrop-filter: blur(6px); }
 #modal .head {
   display: flex;
   align-items: center;
@@ -858,7 +962,11 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
 #modal .head-actions .divider { width: 1px; height: 18px; margin: 0 6px; background: var(--border-strong); }
 #modal .pager { display: flex; align-items: center; gap: 2px; margin-right: 6px; }
 #modal .pager .pos { min-width: 44px; text-align: center; color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
-#mbody { padding: 16px; overflow: auto; }
+/* Scrollable regions get focus so the keyboard can reach their content; the
+   ring is the only cue that they did. */
+#mbody, .table-wrap { outline: none; }
+#mbody:focus-visible, .table-wrap:focus-visible { box-shadow: inset var(--ring); }
+#mbody { flex: 1; min-height: 0; padding: 16px; overflow: auto; }
 #mbody img, #mbody video { display: block; max-width: 100%; max-height: 74vh; margin: 0 auto; border-radius: 10px; }
 #mbody audio { display: block; width: 100%; }
 #mbody iframe { width: 100%; height: 74vh; border: 0; border-radius: 10px; background: #fff; }
@@ -922,15 +1030,19 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
   aside { padding: 10px 8px; }
   .brand { gap: 6px; padding-left: 2px; padding-right: 2px; }
   header { padding: 10px var(--gutter); gap: 8px; }
-  thead th, tbody td { padding-left: 10px; }
+  thead th, tbody td, tbody th.name { padding-left: 10px; }
   .search { width: 168px; }
   #newfolder, #refresh { display: none; }
   .narrow-only { display: inline-flex; }
-  /* The date column folds to nothing. Its cells stay: display:none took them
-     out of the row, so the action cell slid into the zero-width date column
-     and the row buttons vanished. */
-  col.c-date { width: 0; }
-  td.date, th.date { padding: 0; visibility: hidden; }
+  /* The size and date columns fold to nothing, and their values move under the
+     name (.row-meta). The cells themselves stay in the row: display:none took
+     them out, the action cell slid into a zero-width column and the row buttons
+     vanished. */
+  col.c-size, col.c-date { width: 0; }
+  td.num, th.num, td.date, th.date { padding: 0; visibility: hidden; }
+  tbody td, tbody th.name { height: auto; padding-top: 6px; padding-bottom: 6px; }
+  .name-link { height: 24px; }
+  .row-meta { display: block; }
   /* three 26px buttons, 2px apart, inside 10px of padding on each side */
   col.c-act { width: 104px; }
 }
@@ -971,6 +1083,21 @@ td.loading { padding: 26px var(--gutter); text-align: center; color: var(--muted
 
 @media (prefers-reduced-motion: reduce) {
   aside, body.drawer-open aside { transition: none; }
+  tbody tr, .table-wrap.busy table,
+  #progress progress::-webkit-progress-value { transition: none; }
+}
+
+/* Windows High Contrast: box-shadow rings and tinted backgrounds are stripped,
+   so focus and the current bucket get an outline that survives. */
+@media (forced-colors: active) {
+  button:focus-visible, .btn:focus-visible, input:focus-visible,
+  a:focus-visible, .name-link:focus-visible,
+  #mbody:focus-visible, .table-wrap:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .bucket.active { outline: 2px solid Highlight; outline-offset: -2px; }
+  tr.sel > * { border-block-color: Highlight; }
 }
 
 /* no hover: keep per-row actions, bucket delete and the account ＋ always visible */

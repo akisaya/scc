@@ -69,30 +69,34 @@ export function locLink(acct, bucket, prefix, cls) {
   return a;
 }
 
+// The trail is an ordered list, because the order is the hierarchy. The chevrons
+// between the items are drawn by CSS, so screen readers only read the links.
 function crumbs() {
   const nav = $("#crumbs");
-  nav.innerHTML = "";
+  const list = document.createElement("ol");
+  list.className = "crumbs";
   const root = locLink(state.acct, state.bucket, "");
   root.textContent = `${state.acct}/${state.bucket}`;
-  nav.append(root);
+  const rootItem = document.createElement("li");
+  rootItem.append(root);
+  list.append(rootItem);
   let acc = "";
   for (const part of state.prefix.split("/").filter(Boolean)) {
     acc += part + "/";
-    const sep = document.createElement("span");
-    sep.className = "sep";
-    sep.setAttribute("aria-hidden", "true"); // drawn by CSS; the path is read from the links
-    nav.append(sep);
     // the last part of a partial prefix ("many/shard_03") is not a directory
     const target = state.prefix.startsWith(acc) ? acc : state.prefix;
     const a = locLink(state.acct, state.bucket, target);
     a.textContent = part;
-    nav.append(a);
+    const item = document.createElement("li");
+    item.append(a);
+    list.append(item);
   }
-  const last = nav.lastElementChild;
-  if (last && last.tagName === "A") {
+  const last = list.querySelector("li:last-child a");
+  if (last) {
     last.classList.add("cur");
-    last.setAttribute("aria-current", "location");
+    last.setAttribute("aria-current", "page");
   }
+  nav.replaceChildren(list);
   // a deep path overflows: show its tail, which is the part being browsed
   nav.scrollLeft = nav.scrollWidth;
   nav.classList.toggle("fade-left", nav.scrollLeft > 2);

@@ -4,7 +4,6 @@ import { $, el, ICON, icon } from "./dom.js";
 import { state } from "./state.js";
 import { base, ext, fmtSize, fmtFull } from "./format.js";
 import { rawUrl } from "./api.js";
-import { openDialog, shutDialog } from "./dialogs.js";
 
 const IMG = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif", "ico"];
 const VIDEO = ["mp4", "webm", "mov", "m4v", "ogv"];
@@ -15,19 +14,16 @@ const TEXT = ["txt", "md", "json", "js", "mjs", "ts", "css", "html", "xml", "yam
 // how much of a text object the preview reads; the rest stays on the server
 const TEXT_PREVIEW_BYTES = 200000;
 
-let modalFrame = null;
-
 export function openModal() {
-  if (!modalFrame) modalFrame = openDialog($("#modal"), closeModal);
+  const dlg = $("#modal");
+  if (!dlg.open) dlg.showModal();
 }
 
+// Closing is the browser's job (Esc, backdrop, the close button all call this);
+// the reset lives in the close listener so every path runs it.
 export function closeModal() {
-  if ($("#modal").hidden) return;
-  shutDialog(modalFrame);
-  modalFrame = null;
-  $("#modal").querySelector(".box").classList.remove("narrow");
-  $("#modal .head-actions").hidden = false;
-  $("#mbody").innerHTML = "";
+  const dlg = $("#modal");
+  if (dlg.open) dlg.close();
 }
 
 // The files the preview steps through: the ones on screen, in screen order, so
@@ -59,6 +55,7 @@ export function preview(key, stepping) {
   const mine = ++seq;
   current = key;
   body.innerHTML = "";
+  body.scrollTop = 0;
   $("#mtitle").textContent = key;
   $("#mmeta").textContent = obj
     ? `${fmtSize(obj.Size)} · ${fmtFull(obj.LastModified)}`
@@ -66,7 +63,7 @@ export function preview(key, stepping) {
   $("#mdownload").href = rawUrl(key, true);
   $("#mopen").href = rawUrl(key);
   $("#modal .head-actions").hidden = false;
-  $("#modal").querySelector(".box").classList.remove("narrow");
+  $("#modal").classList.remove("narrow");
   paintPager();
   openModal();
   if (!stepping || !$("#modal").contains(document.activeElement)) $("#mclose").focus();
@@ -120,6 +117,14 @@ export function preview(key, stepping) {
 export function initPreview() {
   $("#mprev").onclick = () => step(-1);
   $("#mnext").onclick = () => step(1);
+  // the account form shares this dialog; closing it must not leave the previous
+  // file's body or the narrow class behind
+  $("#modal").addEventListener("close", () => {
+    $("#modal").classList.remove("narrow");
+    $("#modal .head-actions").hidden = false;
+    $("#mbody").innerHTML = "";
+    $("#mbody").scrollTop = 0;
+  });
   $("#modal").addEventListener("keydown", (ev) => {
     if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
     if (ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;

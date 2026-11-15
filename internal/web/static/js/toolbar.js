@@ -31,6 +31,10 @@ export function initToolbar() {
   };
   q.onkeydown = (ev) => {
     if (ev.key === "Enter") {
+      // An IME uses Enter to confirm a candidate. Jumping on it would treat the
+      // pinyin typed so far as a prefix. Safari reports the confirming Enter
+      // with isComposing already false, hence the keyCode 229 fallback.
+      if (ev.isComposing || ev.keyCode === 229) return;
       ev.preventDefault();
       jumpToPrefix(q.value);
     } else if (ev.key === "Escape" && q.value) {
@@ -57,29 +61,74 @@ export function initToolbar() {
     ev.target.value = "";
   };
   $("#mclose").onclick = closeModal;
-  $("#modal").onclick = (ev) => { if (ev.target.id === "modal") closeModal(); };
 
-  // the narrow-screen overflow menu: same actions, one entry point
+  // The narrow-screen overflow menu. As a popover the browser already closes it
+  // on Escape, on a click outside and when focus leaves, and keeps the trigger's
+  // aria-expanded in sync; only "opened from the keyboard enters the menu" is
+  // left, and that is a focus move.
   const moreBtn = $("#more");
   const moreMenu = $("#moremenu");
-  function closeMenu() {
+  const canPopover = Object.hasOwn(HTMLElement.prototype, "popover");
+  let openedByKeyboard = false;
+  const expanded = (open) => moreBtn.setAttribute("aria-expanded", String(open));
+
+  moreBtn.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" || ev.key === " ") openedByKeyboard = true;
+  });
+
+  const closeMenu = (refocus) => {
+    openedByKeyboard = false;
+    if (canPopover) {
+      if (moreMenu.matches(":popover-open")) moreMenu.hidePopover();
+      return;
+    }
     moreMenu.hidden = true;
-    moreBtn.setAttribute("aria-expanded", "false");
-  }
-  moreBtn.onclick = (ev) => {
-    ev.stopPropagation();
-    moreMenu.hidden = !moreMenu.hidden;
-    moreBtn.setAttribute("aria-expanded", String(!moreMenu.hidden));
-    if (!moreMenu.hidden) moreMenu.querySelector("button").focus();
+    expanded(false);
+    if (refocus) moreBtn.focus();
   };
+
+  if (canPopover) {
+    moreMenu.addEventListener("toggle", (ev) => {
+      const open = ev.newState === "open";
+      expanded(open);
+      if (!open) {
+        openedByKeyboard = false;
+        return;
+      }
+      if (openedByKeyboard) moreMenu.querySelector("button").focus();
+    });
+  } else {
+    // Safari 16 has no popover: drop the attribute so the CSS can position it as
+    // an ordinary dropdown, and rebuild the dismissal the browser would give us.
+    moreMenu.removeAttribute("popover");
+    moreMenu.hidden = true;
+    expanded(false);
+    moreBtn.onclick = () => {
+      if (!moreMenu.hidden) return closeMenu(false);
+      moreMenu.hidden = false;
+      expanded(true);
+      if (openedByKeyboard) moreMenu.querySelector("button").focus();
+    };
+    document.addEventListener("click", (ev) => {
+      if (moreMenu.hidden || moreMenu.contains(ev.target) || ev.target === moreBtn) return;
+      closeMenu(false);
+    });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && !moreMenu.hidden) closeMenu(true);
+    });
+  }
+
   moreMenu.querySelectorAll("button").forEach((b) => {
     b.onclick = () => {
-      closeMenu();
+      closeMenu(false);
       if (b.dataset.act === "refresh") load();
       else newFolder();
     };
   });
-  document.addEventListener("click", (ev) => {
-    if (!moreMenu.hidden && !moreMenu.contains(ev.target) && ev.target !== moreBtn) closeMenu();
+  // above 860px the trigger is display:none: an open menu left behind would
+  // have nothing to hang from
+  const narrow = matchMedia("(max-width: 860px)");
+  narrow.addEventListener("change", () => {
+    if (!narrow.matches) closeMenu(false);
   });
 }
