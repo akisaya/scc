@@ -35,7 +35,11 @@ export function errCard({ title, sub, raw, retry }) {
 
   const more = document.createElement("details");
   more.append(el("summary", null, "查看错误信息"));
-  more.append(el("pre", null, String(raw)));
+  // the raw text is capped and scrolls; a scroll container the keyboard cannot
+  // reach is mouse-only, the same trap the preview body had
+  const rawPre = el("pre", null, String(raw));
+  rawPre.tabIndex = 0;
+  more.append(rawPre);
   box.append(more);
   return box;
 }
