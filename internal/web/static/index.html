@@ -15,7 +15,6 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<a class="skip" href="#content">跳到文件列表</a>
 <aside id="sidebar" aria-label="账户与桶">
   <div class="brand">
     <img class="logo" src="/static/logo.svg" width="22" height="22" alt="">
@@ -65,10 +64,13 @@
         <button type="button" data-act="refresh">刷新</button>
         <button type="button" data-act="newfolder">新建文件夹</button>
       </div>
-      <label class="btn btn-primary">
+      <!-- A real button, not a label around the input: the input is display:none,
+           so the label was never focusable and the picker was mouse-only. -->
+      <button id="uploadbtn" class="btn btn-primary" type="button" title="上传文件">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0 4 4m-4-4L8 8M5 19h14"/></svg>
-        上传<input id="upload" type="file" multiple hidden>
-      </label>
+        上传
+      </button>
+      <input id="upload" type="file" multiple hidden>
     </div>
   </header>
 

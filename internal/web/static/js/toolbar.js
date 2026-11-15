@@ -56,6 +56,7 @@ export function initToolbar() {
   $("#refresh").onclick = () => load();
   $("#newfolder").onclick = () => newFolder();
   $("#addaccount").onclick = openAccountForm;
+  $("#uploadbtn").onclick = () => $("#upload").click();
   $("#upload").onchange = (ev) => {
     uploadFiles([...ev.target.files]);
     ev.target.value = "";

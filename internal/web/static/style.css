@@ -97,24 +97,6 @@ body {
   white-space: nowrap;
 }
 
-/* The sidebar and the toolbar come before the listing on every page; this is
-   the one way past them without a few hundred Tab presses. It stays focusable
-   and in the accessibility tree, just parked above the viewport. */
-.skip {
-  position: fixed;
-  top: 8px;
-  left: 8px;
-  z-index: 60;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: var(--fs-sm);
-  text-decoration: none;
-  transform: translateY(-200%);
-}
-.skip:focus { transform: none; }
-
 /* button/.btn set display, which would otherwise beat the UA rule for [hidden] */
 [hidden] { display: none !important; }
 
