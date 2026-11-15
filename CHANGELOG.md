@@ -6,6 +6,43 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-15
+
+The web UI hands its dialogs and menus back to the browser, and the listing is
+usable on a phone and from the keyboard.
+
+### Changed
+
+- The preview, confirm and input dialogs are native `<dialog>` elements opened
+  with `showModal()`. The hand-written focus trap, Escape stack, backdrop and
+  focus restore are gone, and a dialog now returns focus to the row that opened
+  it.
+- The narrow-screen ⋯ menu is a popover, so the browser keeps Escape, outside
+  clicks, the top layer and `aria-expanded` in sync. The `role="menu"` that had
+  no arrow keys is gone.
+- The theme button returns to following the system once you switch back to the
+  system's current colours, instead of pinning the choice from then on.
+- Table headers carry `scope` and a caption, the filename is a row header, the
+  breadcrumbs are an ordered list with `aria-current="page"`, and the listing is
+  a named region so it scrolls from the keyboard.
+
+### Fixed
+
+- Enter in the search box no longer jumps to a prefix while an IME is composing.
+- 上传 is a real button. As a label around a hidden input it was never in the tab
+  order, so the picker was mouse-only.
+- Below 860px the modified time and size move under the filename instead of
+  being hidden, and on touch devices inputs are 16px, so iOS Safari no longer
+  zooms the page when one takes focus.
+- Toast text is announced: the live region no longer starts at `display:none`,
+  and a toast is not removed while focus is inside it.
+- Long previews and long error output scroll from the keyboard.
+
+### Removed
+
+- The "skip to the listing" link. It did move focus, but on a sidebar this short
+  it saved a few tab stops and covered the brand on the first Tab.
+
 ## [0.6.3] - 2026-11-05
 
 The web sidebar now identifies the running binary, so it is clear which release
