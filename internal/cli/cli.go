@@ -19,14 +19,16 @@ commands:
   accounts rm <name>            remove an account
   use <acct>://bucket           switch the bucket <acct>: resolves against
                                 (use <acct>: to clear it)
-  ls <acct>:[/prefix] [-r] [-n N]
-  ls <acct>://bucket[/prefix] [-r] [-n N]
+  ls <acct>:[/path] [-p] [-r] [-n N]
+  ls <acct>://bucket[/path] [-p] [-r] [-n N]
                                 list buckets, objects or a directory
+                                (-p: raw S3 prefix; -r: all directory levels)
                                 (-n: entries to print; on a terminal 100 by
                                 default, -n 0 prints everything)
   buckets <acct>                list buckets (use when a default bucket is set)
   cat <acct>://bucket/key       write an object to stdout
-  cp [-r] <src> <dst>           copy between local and S3, or S3 to S3
+  cp [-p] [-r] <src> <dst>      copy between local and S3, or S3 to S3
+                                (-p: raw S3 source prefix; -r: all levels)
   rm [-r] <acct>://bucket/key   delete an object or a prefix
   mb <acct>://bucket            create a bucket
   rb <acct>://bucket            delete an empty bucket

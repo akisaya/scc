@@ -6,6 +6,28 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-19
+
+### Added
+
+- `ls -p` and `cp -p` explicitly match a raw S3 prefix. Without `-r`, only the
+  immediate objects are listed or copied; `-p -r` expands all matching levels.
+
+### Changed
+
+- `ls` and S3-source `cp` now resolve an exact file first, even with `-r`.
+  Directory paths automatically gain a trailing slash, so `docs` cannot include
+  `docs-old/`. Use `-p -r` for the former recursive prefix matching.
+- Prefix listings and copies retain names relative to the prefix's parent
+  directory rather than cutting through a filename. Normal recursive copies
+  continue to copy directory contents.
+
+### Fixed
+
+- Prefix downloads detect conflicting local paths before copying any objects,
+  and directory copies skip S3 folder placeholders.
+- A single S3 file can be downloaded into an existing relative local directory.
+
 ## [0.6.4] - 2026-11-15
 
 The web UI hands its dialogs and menus back to the browser, and the listing is

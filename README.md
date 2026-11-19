@@ -78,30 +78,34 @@ scc <command> [args]
 | `accounts list` / `accounts rm <name>` | 列出账号 / 删除账号 |
 | `use <acct>://bucket` | 把 `bucket` 设为该账号的默认桶（使用 `<acct>:` 清除） |
 | `buckets <acct>` | 列桶，不受默认桶影响 |
-| `ls <acct>:[/prefix]` / `<acct>://bucket[/prefix]` | 列桶或目录；加 `-r` 时递归列整个前缀 |
+| `ls [-p] [-r] <acct>:[/path]` / `<acct>://bucket[/path]` | 列桶、文件或目录；`-p` 按原始前缀匹配，`-r` 展开所有层级 |
 | `cat <acct>:/key` / `<acct>://bucket/key` | 把对象写到标准输出 |
-| `cp [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝 |
+| `cp [-p] [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝；`-p` 按原始 S3 源前缀匹配 |
 | `rm [-r] <acct>:/key` / `<acct>://bucket/key` | 删除一个对象，或删除某个前缀下的全部对象 |
 | `mb` / `rb <acct>://bucket` | 创建桶 / 删除空桶（必须写桶名） |
 | `web [-addr host:port]` | 启动网页界面 |
 | `version` | 打印版本号（由发布构建注入） |
 
 ```bash
+scc ls minio:/abc.txt                  # 列出指定文件的大小、修改时间和名称
+scc ls -p minio:/reports/202           # 按前缀寻找文件或目录，只展示一层
+scc ls -p -r minio:/reports/202         # 展开全部匹配对象，输出完整 key
 scc ls -r minio:/reports/ -n 20         # 递归列出前 20 条，输出完整 key
 scc ls minio:/reports/ -n 0 |
   awk '$1 == "DIR" { n++ } END { print n + 0 }'  # 统计直接子目录数
 scc ls -r minio:/reports/ -n 0 |
   awk 'END { print NR + 0 }'                     # 统计全部对象数
 scc cp -r ./assets minio:/reports/      # 上传目录
-scc cp -r minio:/reports/2025 ./out     # 下载一个前缀
+scc cp -r minio:/reports/2025 ./out     # 下载指定目录的内容
+scc cp -p -r minio:/reports/202 ./out   # 按前缀下载到 out/2025/... 等路径
 scc rm -r minio:/tmp/                   # 删除一个前缀
 ```
 
 > [!NOTE]
-> 非递归 `ls` 把没有结尾 `/` 的路径当作目录，例如 `minio:/reports/cac` 会查询 `reports/cac/`，不会匹配到 `reports/cache/`。加 `-r` 时则把原始字符串直接作为 S3 `ListObjectsV2` 的 `Prefix`，且不设置 `Delimiter`。
+> `ls` 和以 S3 为源的 `cp` 默认优先选择完整 key 对应的文件，没有同名文件时补 `/` 操作指定目录；文件与目录同名时，用结尾 `/` 指定目录。`-p` 使用原始 S3 prefix，不补 `/`、不优先选择文件；`-r` 只控制是否展开所有目录层级。需要沿用旧版递归前缀匹配时，请使用 `-p -r`。
 
 > [!WARNING]
-> 以 S3 为源的 `cp -r` 和 `rm -r` 也使用原始 S3 prefix；要操作一个目录时请保留结尾 `/`。`cat`、普通 `rm` 和非递归 `cp` 则要求完整 key。
+> `rm -r` 使用原始 S3 prefix，删除一个目录时请保留结尾 `/`，以免匹配到同前缀的其他目录。`cat` 和普通 `rm` 要求完整 key。
 
 完整示例、各命令的 prefix 语义、目录与完整 key 的区别、数量统计、`cp -r` 的复制语义与终端输出截断规则见 [命令行说明](docs/cli.md)。
 

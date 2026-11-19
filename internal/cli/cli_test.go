@@ -115,6 +115,7 @@ func TestFlagsFirst(t *testing.T) {
 		{"acct:/x -n 5", "-n 5 acct:/x"},
 		{"-n 5 acct:/x", "-n 5 acct:/x"},
 		{"acct:/x -r", "-r acct:/x"},
+		{"acct:/x -p -r -n 2", "-p -r -n 2 acct:/x"},
 		{"-r acct:/x -n 2", "-r -n 2 acct:/x"},
 		{"acct:/x -n=2", "-n=2 acct:/x"},
 		{"acct:/x", "acct:/x"},

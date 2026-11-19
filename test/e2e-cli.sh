@@ -34,11 +34,15 @@ echo "hello scc" > "$T/a.txt"
 "$BIN" cp "$T/a.txt" "local:/docs/a.txt" >/dev/null || fail=$((fail+1))
 check "cat inside default bucket" "hello scc" "$("$BIN" cat "local:/docs/a.txt")"
 check "ls lists object" "1" "$("$BIN" ls "local:/docs/" | grep -c 'a.txt')"
+check "ls exact file in default bucket" "1" "$("$BIN" ls "local:/docs/a.txt" | grep -c 'a.txt$')"
+check "ls exact file prints basename" "0" "$("$BIN" ls "local:/docs/a.txt" | grep -c 'docs/a.txt')"
+check "ls directory without trailing slash" "1" "$("$BIN" ls "local:/docs" | grep -c 'a.txt$')"
 check "ls prints names relative to the directory" "0" "$("$BIN" ls "local:/docs/" | grep -c 'docs/a.txt')"
 check "ls -r keeps full keys" "1" "$("$BIN" ls -r "local:/docs/" | grep -c 'docs/a.txt')"
 
 # the same key reached through an account without a default bucket
 check "explicit bucket form" "hello scc" "$("$BIN" cat "plain://$B/docs/a.txt")"
+check "ls exact file with explicit bucket" "1" "$("$BIN" ls "plain://$B/docs/a.txt" | grep -c 'a.txt$')"
 check "single slash requires a default bucket" "1" \
   "$("$BIN" ls "plain:/docs/" 2>&1 | grep -c 'no default bucket')"
 
@@ -81,6 +85,37 @@ check "subdir listed as DIR" "1" "$("$BIN" ls "local:/tree" | grep -c 'DIR.*sub/
 mkdir -p "$T/out"
 "$BIN" cp -r "local:/tree" "$T/out" >/dev/null || fail=$((fail+1))
 check "recursive download" "two" "$(cat "$T/out/sub/2.txt" 2>/dev/null)"
+
+# Path selection and recursion are independent; raw prefix matching is explicit.
+for key in abc.txt abc.txt.bak abc.txt/child.txt docs/a.txt docs/sub/b.txt docs-old/c.txt; do
+  "$BIN" cp "$T/a.txt" "local:/semantics/$key" >/dev/null || fail=$((fail+1))
+done
+check "ls -r selects an exact file" "1" "$("$BIN" ls -r local:/semantics/abc.txt | wc -l | tr -d ' ')"
+check "ls -r respects directory boundaries" "2" "$("$BIN" ls -r local:/semantics/docs | wc -l | tr -d ' ')"
+check "ls -p retains the full filename" "1" "$("$BIN" ls -p local:/semantics/abc | grep -c 'abc.txt.bak$')"
+check "ls -p groups matching directories" "2" "$("$BIN" ls -p local:/semantics/doc | grep -c '^DIR')"
+check "ls -p -r expands all matches" "3" "$("$BIN" ls -p -r local:/semantics/doc | wc -l | tr -d ' ')"
+
+"$BIN" cp -r local:/semantics/abc.txt "$T/single-with-r.txt" >/dev/null || fail=$((fail+1))
+check "cp -r selects an exact file" "hello scc" "$(cat "$T/single-with-r.txt" 2>/dev/null)"
+"$BIN" cp -r local:/semantics/docs "$T/dir-copy" >/dev/null || fail=$((fail+1))
+check "cp -r copies directory contents" "hello scc" "$(cat "$T/dir-copy/sub/b.txt" 2>/dev/null)"
+check "cp -r excludes sibling prefixes" "2" "$(find "$T/dir-copy" -type f | wc -l | tr -d ' ')"
+"$BIN" cp -p local:/semantics/abc "$T/prefix-files" >/dev/null || fail=$((fail+1))
+check "cp -p copies only direct files" "2" "$(find "$T/prefix-files" -type f | wc -l | tr -d ' ')"
+"$BIN" cp -p -r local:/semantics/doc "$T/prefix-copy" >/dev/null || fail=$((fail+1))
+check "cp prefix keeps directory names" "hello scc" "$(cat "$T/prefix-copy/docs-old/c.txt" 2>/dev/null)"
+check "cp prefix expands nested objects" "hello scc" "$(cat "$T/prefix-copy/docs/sub/b.txt" 2>/dev/null)"
+
+"$BIN" cp -r local:/semantics/docs local:/semantics/copied-dir/ >/dev/null || fail=$((fail+1))
+check "S3 directory copy respects boundaries" "2" "$("$BIN" ls -r local:/semantics/copied-dir | wc -l | tr -d ' ')"
+"$BIN" cp -p -r local:/semantics/doc local:/semantics/copied-prefix/ >/dev/null || fail=$((fail+1))
+check "S3 prefix copy retains names" "hello scc" "$("$BIN" cat local:/semantics/copied-prefix/docs-old/c.txt)"
+mkdir -p "$T/conflict"
+check "prefix download reports local conflicts" "1" \
+  "$("$BIN" cp -p -r local:/semantics/abc "$T/conflict" 2>&1 | grep -c 'file/directory conflict')"
+check "conflict checked before downloading" "0" "$(find "$T/conflict" -type f | wc -l | tr -d ' ')"
+"$BIN" rm -r local:/semantics/ >/dev/null || fail=$((fail+1))
 
 "$BIN" cp "local:/docs/b.md" "$T/dl.md" >/dev/null || fail=$((fail+1))
 check "single download" "hello scc" "$(cat "$T/dl.md")"

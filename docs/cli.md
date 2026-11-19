@@ -78,7 +78,7 @@ scc use minio:              # 清除默认桶
 
 S3 没有传统文件夹。列表中的 `DIR` 是 `scc` 根据 `Delimiter=/` 从对象 key 推导出的公共前缀。
 
-`-r`、不带 `-r` 的 `ls` 以及精确对象操作使用不同的路径规则，具体见各命令说明。
+`ls` 和以 S3 为源的 `cp` 共用路径规则：默认优先选择精确文件，没有同名文件时补 `/` 选择目录；`-p` 使用原始 prefix；`-r` 控制是否展开所有目录层级。`rm -r` 使用原始 prefix，具体见各命令说明。
 
 ## 命令总览
 
@@ -92,9 +92,9 @@ scc <command> [args]
 | `accounts list` / `accounts rm <name>` | 列出账号 / 删除账号 |
 | `use <acct>://bucket` | 设置默认桶；`use <acct>:` 清除默认桶 |
 | `buckets <acct>` | 列出账号下的桶，不受默认桶影响 |
-| `ls <acct>:[/prefix]` / `<acct>://bucket[/prefix]` | 列目录；加 `-r` 时列出原始 prefix 下的全部对象 |
+| `ls [-p] [-r] <acct>:[/path]` / `<acct>://bucket[/path]` | 列文件或目录；`-p` 按原始 prefix 匹配，`-r` 展开所有层级 |
 | `cat <acct>:/key` / `<acct>://bucket/key` | 把一个对象写到标准输出 |
-| `cp [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝 |
+| `cp [-p] [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝；`-p` 按原始 S3 源 prefix 匹配 |
 | `rm [-r] <acct>:/key` / `<acct>://bucket/key` | 删除一个对象，或删除原始 prefix 下的全部对象 |
 | `mb` / `rb <acct>://bucket` | 创建桶 / 删除空桶 |
 | `web [-addr host:port]` | 启动网页界面 |
@@ -102,9 +102,16 @@ scc <command> [args]
 
 ## 命令说明
 
-### `ls`：列目录与完整 key
+### `ls`：列文件与目录
 
-不带 `-r` 时，`ls` 使用目录模式：显示当前目录下的直接文件，以及下一级目录，不列出下一级目录中的对象。输出名称相对于当前目录：
+不带 `-p` 且路径没有结尾 `/` 时，`ls` 优先匹配完整对象 key。存在同名文件就只列出该文件的大小、修改时间和文件名，带 `-r` 也不会列出名字以它开头的其他对象：
+
+```bash
+scc ls minio:/abc.txt
+scc ls minio:/reports/README.md
+```
+
+没有同名文件时，`ls` 自动补 `/` 并列目录。路径以 `/` 结尾时始终列目录。不带 `-r` 时显示当前目录下的直接文件，以及下一级目录，不列出下一级目录中的对象。输出名称相对于当前目录：
 
 ```bash
 scc ls minio:/reports/
@@ -118,10 +125,12 @@ DIR    weights/
 
 若完整 key 是 `reports/models/run.bin`，在当前目录 `reports/` 下列出时只显示 `models/`。
 
-目录模式会把没有结尾 `/` 的路径当作目录并自动补 `/`。因此它要求目录名完整，不做模糊匹配：
+S3 可以同时存在 `abc.txt` 文件和 `abc.txt/` 目录。`scc ls minio:/abc.txt` 列文件，`scc ls minio:/abc.txt/` 列目录内容。
+
+目录模式要求目录名完整，不做模糊匹配：
 
 ```bash
-# 实际查询 reports/cac/，通常没有结果
+# 没有 reports/cac 文件时查询 reports/cac/，通常没有结果
 scc ls minio:/reports/cac
 
 # 目录名完整时正常列出
@@ -133,7 +142,9 @@ scc ls minio:/reports/
 
 如果不知道完整目录名，先列父目录。输出中的 `DIR cache/` 给出准确名称。
 
-加 `-r` 后，路径会原样作为 S3 `ListObjectsV2` 的 `Prefix`，并且不设置 `Delimiter`。返回所有 key 以该字符串开头的对象，可以跨越多层目录，输出保留完整 key：
+文件匹配使用 S3 列表接口，无需读取对象内容的权限。省略结尾 `/` 的目录查询会多一次用于判断同名文件的列表请求；显式保留 `/` 可以直接列目录。
+
+`-r` 只控制遍历深度：文件仍然只列该文件，目录则列所有层级的对象，输出保留完整 key。`reports/cache` 和 `reports/cache/` 在没有同名文件时都只列 `reports/cache/` 内的对象：
 
 ```bash
 scc ls -r minio:/reports/ -n 0
@@ -145,7 +156,24 @@ reports/weights/model.bin
 reports/README.md
 ```
 
-`-r` 不会自动补 `/`。S3 prefix 按字符开头匹配，所以 `reports/cache` 也可能匹配 `reports/cache-old/`。要限定为一个目录，应显式写成 `reports/cache/`。
+显式加 `-p` 后，输入原样作为 S3 `ListObjectsV2` 的 `Prefix`，不补 `/`，也不优先选择同名文件。不带 `-r` 时设置 `Delimiter=/`，更深的匹配对象由 S3 归并成最近一层目录；加 `-r` 时不设置 `Delimiter`，直接列出所有匹配对象：
+
+```bash
+scc ls -p minio:/reports/cac          # 可以看到 DIR cache/、DIR cache-old/
+scc ls -p -r minio:/reports/cac       # 列出两个目录内的全部匹配对象
+scc ls -p minio:/reports/README      # 文件仍显示 README.md，而不是 .md
+```
+
+非递归 prefix 模式的名称相对于 prefix 的父目录；递归模式保留完整 key。以 `reports/cache` 为例，四种组合对应：
+
+| 选项 | S3 `Prefix`（默认模式假设没有同名文件） | S3 `Delimiter` |
+| --- | --- | --- |
+| 无 | `reports/cache/` | `/` |
+| `-r` | `reports/cache/` | 不设置 |
+| `-p` | `reports/cache` | `/` |
+| `-p -r` | `reports/cache` | 不设置 |
+
+旧版 `ls -r` 的任意前缀匹配需要改为 `ls -p -r`。prefix 匹配与 `-n` 的输出数量限制相互独立。
 
 在终端中，`ls` 最多输出 100 条并提示截断；`-n 0` 输出全部。通过管道或重定向输出时不会截断。选项可以写在路径前后：
 
@@ -156,7 +184,7 @@ scc ls -n 20 minio:/reports
 
 ### 统计数量
 
-S3 没有传统目录，对象数量通常就是文件数量。递归统计 prefix 下的全部对象：
+S3 没有传统目录，对象数量通常就是文件数量。递归统计指定目录下的全部对象：
 
 ```bash
 set -o pipefail
@@ -165,6 +193,8 @@ awk 'END { print NR + 0 }'
 ```
 
 `awk` 使用 `NR` 统计 `ls` 输出的对象行；没有对象时仍输出 `0`。`set -o pipefail` 让 `scc` 列举失败时整条管道也返回失败，避免把错误误报为 `0`。
+
+按任意 prefix 统计时，使用 `scc ls -p -r minio:/reports/202 -n 0` 再接同样的 `awk`。
 
 如果存储中存在以 `/` 结尾的目录占位对象，而只想统计非目录对象：
 
@@ -193,30 +223,42 @@ scc cp ./q4.pdf minio:/reports/
 # 上传目录内容
 scc cp -r ./assets minio:/reports/
 
-# 下载一个 prefix
+# 下载指定目录的内容
 scc cp -r minio:/reports/2025/ ./downloads/reports-2025
 
 # 同账号服务端复制
 scc cp minio:/a.txt minio://data/b.txt
 ```
 
-普通 `cp` 只操作一个精确对象或本地文件。目标为 S3 路径且 key 为空或以 `/` 结尾时，会把源文件 basename 拼到目标路径；本地目标是已有目录或以路径分隔符结尾时也一样。例如 `scc cp minio:/reports/q4.pdf ./downloads/` 会写成 `downloads/q4.pdf`。
+普通 `cp` 只操作一个精确对象或本地文件，给目录源需要加 `-r`。完整文件源带 `-r` 时仍只复制该文件。目标为 S3 路径且 key 为空或以 `/` 结尾时，会把源文件 basename 拼到目标路径；本地目标是已有目录或以路径分隔符结尾时也一样。例如 `scc cp minio:/reports/q4.pdf ./downloads/` 会写成 `downloads/q4.pdf`。
 
-以 S3 为源时，`cp -r` 把给定的源路径原样作为 S3 prefix，不设置 `Delimiter`，也不会自动补 `/`：
+以 S3 为源时，`cp` 和 `ls` 使用同样的文件、目录识别规则。`cp -r` 自动给目录源补 `/`，不会匹配到同前缀的其他目录：
 
 ```bash
-scc cp -r minio:/reports/cache/ ./cache
+scc cp -r minio:/reports/cache ./cache  # 只复制 reports/cache/ 内的内容
 ```
 
-每个对象 key 会先机械地移除源 prefix，再拼到目标路径。使用部分 prefix 会得到不直观的相对路径：`reports/cac` 可以匹配 `reports/cache/kernel.cu`，但剩余部分是 `he/kernel.cu`。复制目录时应写出完整目录和结尾 `/`。
-
-`cp -r` 复制的是 prefix 的**内容**，行为与 `aws s3 cp --recursive` 一致。例如：
+`cp -r` 复制的是目录的**内容**，源路径末尾的 `/` 不改变是否包含源目录名。例如：
 
 ```bash
 scc cp -r minio:/reports/2025/ ./out
 ```
 
 会得到 `./out/<reports/2025/ 内的相对 key>`。上传本地目录时不会查询 S3 prefix；`scc` 遍历本地文件系统，并把文件写到目标 S3 路径下。
+
+需要按原始 S3 prefix 匹配源对象时，显式加 `-p`。`cp -p` 只复制直接匹配到的对象，子目录需要加 `-r` 才展开。目标按目录处理，对象名称相对于 prefix 的父目录保留完整路径：
+
+```bash
+scc cp -p minio:/reports/README ./out/  # reports/README.md -> out/README.md
+scc cp -p -r minio:/reports/cac ./out/  # reports/cache/a.txt -> out/cache/a.txt
+                                      # reports/cache-old/b.txt -> out/cache-old/b.txt
+scc cp -p -r minio:/reports/cac minio:/backup/
+                                      # 同样得到 backup/cache/a.txt 等 key
+```
+
+旧版 `cp -r` 的原始 prefix 匹配需要显式加 `-p`；prefix 模式按父目录保留名称，避免把部分文件名裁掉。`-p` 仅接受 S3 源，本地源请使用普通 `cp` 或 `cp -r`。目录复制跳过以 `/` 结尾的占位对象。
+
+S3 可以同时存在同名文件与目录，本地文件系统不能。prefix 下载遇到 `abc.txt` 与 `abc.txt/child.txt` 这样的路径冲突时，会在下载前报错。
 
 跨账号复制不受支持，需要先下载再上传。
 

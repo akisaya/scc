@@ -8,18 +8,21 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/akisaya/scc/internal/s3x"
 )
 
 func lsCmd(args []string) error {
 	fs := flag.NewFlagSet("ls", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	recursive := fs.Bool("r", false, "list recursively")
+	prefixMode := fs.Bool("p", false, "treat the path as a raw S3 prefix")
 	limit := fs.Int("n", -1, "max entries to print: -1 = all when piped, 100 on a terminal; 0 = unlimited")
 	if err := fs.Parse(flagsFirst(args, "n")); err != nil {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return errors.New("usage: scc ls <account>:[/prefix] or <account>://bucket[/prefix] [-r] [-n N]")
+		return errors.New("usage: scc ls <account>:[/path] or <account>://bucket[/path] [-p] [-r] [-n N]")
 	}
 	c, t, err := withTarget(fs.Arg(0))
 	if err != nil {
@@ -46,19 +49,26 @@ func lsCmd(args []string) error {
 		return nil
 	}
 
-	prefix := t.key
-	if !*recursive && prefix != "" && !strings.HasSuffix(prefix, "/") {
-		prefix += "/" // treat "bucket/dir" as a directory, the way a file browser expects
-	}
-	l, err := c.List(ctx(), t.bucket, prefix, *recursive, int32(max))
+	src, err := resolveSource(t.key, *prefixMode, func() (s3x.Object, error) {
+		return listedObject(ctx(), c, t.bucket, t.key)
+	})
 	if err != nil {
 		return err
 	}
+	var l *s3x.Listing
+	if src.object != nil {
+		l = &s3x.Listing{Objects: []s3x.Object{*src.object}}
+	} else {
+		l, err = c.List(ctx(), t.bucket, src.prefix, *recursive, int32(max))
+		if err != nil {
+			return err
+		}
+	}
 	for _, p := range l.Prefixes {
-		fmt.Fprintf(w, "DIR\t%s\n", nameIn(p, prefix, *recursive))
+		fmt.Fprintf(w, "DIR\t%s\n", nameIn(p, src.prefix, *recursive))
 	}
 	for _, o := range l.Objects {
-		fmt.Fprintf(w, "%s\t%s\t%s\n", humanSize(o.Size), o.LastModified.Format("2006-01-02 15:04"), nameIn(o.Key, prefix, *recursive))
+		fmt.Fprintf(w, "%s\t%s\t%s\n", humanSize(o.Size), o.LastModified.Format("2006-01-02 15:04"), nameIn(o.Key, src.prefix, *recursive))
 	}
 	if l.Truncated {
 		w.Flush()
@@ -74,13 +84,13 @@ func isTerminal(f *os.File) bool {
 	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
-// nameIn prints names relative to the listed directory, like other S3 tools;
-// a recursive listing keeps full keys so the output stays unambiguous.
+// nameIn prints names relative to the directory portion of the prefix, so a
+// partial prefix never cuts a filename. A recursive listing keeps full keys.
 func nameIn(key, prefix string, recursive bool) string {
 	if recursive || prefix == "" {
 		return key
 	}
-	return strings.TrimPrefix(key, prefix)
+	return strings.TrimPrefix(key, parentPrefix(prefix))
 }
 
 // bucketsCmd lists buckets explicitly, since "acct:" resolves to the default bucket when one is set.
