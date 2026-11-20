@@ -27,13 +27,22 @@ commands:
                                 default, -n 0 prints everything)
   buckets <acct>                list buckets (use when a default bucket is set)
   cat <acct>://bucket/key       write an object to stdout
-  cp [-p] [-r] <src> <dst>      copy between local and S3, or S3 to S3
+  cp [-p] [-r] [--skip-existing] <src> <dst>
+                                copy between local and S3, or S3 to S3
                                 (-p: raw S3 source prefix; -r: all levels)
-  rm [-r] <acct>://bucket/key   delete an object or a prefix
+  get [-p] [-r] [--skip-existing] <src> [dst]
+                                download from S3 to a local path (default .)
+                                (-p: raw S3 source prefix; -r: all levels)
+  put [-r] [--skip-existing] <src> <dst>
+                                upload local files or directory contents to S3
+  rm [-p] [-r] [--dry-run] <S3-path>
+                                delete files or directory contents
+                                (-p: raw prefix; --dry-run: preview only)
   mb <acct>://bucket            create a bucket
   rb <acct>://bucket            delete an empty bucket
   web [-addr host:port]         start the browser UI (default from config listen)
   version                       print the version (stamped by the release build)
+  help [command]                show command usage, options and examples
 
 accounts add flags:
   -endpoint       S3 endpoint URL (omit for AWS)
@@ -60,6 +69,16 @@ func Run(args []string, version string) error {
 		fmt.Print(usageText)
 		return nil
 	}
+	if args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
+		return helpCmd(args[1:])
+	}
+	if helpRequested(args[1:], args[0]) {
+		topic := []string{args[0]}
+		if (args[0] == "accounts" || args[0] == "acct") && len(args) > 1 && !strings.HasPrefix(args[1], "-") {
+			topic = append(topic, args[1])
+		}
+		return helpCmd(topic)
+	}
 	switch cmd, rest := args[0], args[1:]; cmd {
 	case "accounts", "acct":
 		return accountsCmd(rest)
@@ -73,6 +92,10 @@ func Run(args []string, version string) error {
 		return catCmd(rest)
 	case "cp":
 		return cpCmd(rest)
+	case "get":
+		return getCmd(rest)
+	case "put":
+		return putCmd(rest)
 	case "rm":
 		return rmCmd(rest)
 	case "mb":
@@ -81,9 +104,6 @@ func Run(args []string, version string) error {
 		return rbCmd(rest)
 	case "web":
 		return webCmd(rest, version)
-	case "help", "-h", "--help":
-		fmt.Print(usageText)
-		return nil
 	default:
 		return fmt.Errorf("unknown command %q (try: scc help)", cmd)
 	}
@@ -203,8 +223,14 @@ func flagsFirst(args []string, valueFlags ...string) []string {
 		return false
 	}
 	var flags, pos []string
+	literal := false
 	for i := 0; i < len(args); i++ {
 		a := args[i]
+		if a == "--" {
+			literal = true
+			pos = append(pos, args[i+1:]...)
+			break
+		}
 		if len(a) > 1 && a[0] == '-' {
 			flags = append(flags, a)
 			if takesValue(a) && i+1 < len(args) {
@@ -214,6 +240,9 @@ func flagsFirst(args []string, valueFlags ...string) []string {
 			continue
 		}
 		pos = append(pos, a)
+	}
+	if literal {
+		flags = append(flags, "--")
 	}
 	return append(flags, pos...)
 }

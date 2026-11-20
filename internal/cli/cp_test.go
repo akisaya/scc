@@ -13,17 +13,20 @@ import (
 	"github.com/akisaya/scc/internal/s3x"
 )
 
-func TestCPSources(t *testing.T) {
+func TestCopySources(t *testing.T) {
 	keys := []string{
 		"abc.txt", "abc.txt.bak", "abc.txt/child.txt",
 		"docs/", "docs/abc.txt", "docs/sub/", "docs/sub/child.txt", "docs-old/other.txt",
 	}
-	for _, remote := range []bool{false, true} {
-		kind := "download"
-		if remote {
-			kind = "S3 copy"
-		}
-		t.Run(kind, func(t *testing.T) {
+	for _, mode := range []struct {
+		name, command string
+		remote        bool
+	}{
+		{"cp download", "cp", false},
+		{"get download", "get", false},
+		{"S3 copy", "cp", true},
+	} {
+		t.Run(mode.name, func(t *testing.T) {
 			for _, tc := range []struct {
 				name, src string
 				flags     []string
@@ -58,13 +61,13 @@ func TestCPSources(t *testing.T) {
 						t.Fatal(err)
 					}
 					dst := "out" // also exercise an existing relative destination directory
-					if remote {
+					if mode.remote {
 						dst = "local:/out/"
 					}
-					args := append([]string{"cp", "local:/" + tc.src, dst}, tc.flags...)
+					args := append([]string{mode.command, "local:/" + tc.src, dst}, tc.flags...)
 					_, _, err := runCLI(t, args...)
 					wantErr, want := tc.wantErr, tc.want
-					if !remote && tc.localErr != "" {
+					if !mode.remote && tc.localErr != "" {
 						wantErr, want = tc.localErr, nil
 					}
 					if wantErr != "" {
@@ -75,7 +78,7 @@ func TestCPSources(t *testing.T) {
 						t.Fatal(err)
 					}
 					var got []string
-					if remote {
+					if mode.remote {
 						mock.mu.Lock()
 						defer mock.mu.Unlock()
 						for key, body := range mock.objects {

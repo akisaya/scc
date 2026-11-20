@@ -80,11 +80,14 @@ scc <command> [args]
 | `buckets <acct>` | 列桶，不受默认桶影响 |
 | `ls [-p] [-r] <acct>:[/path]` / `<acct>://bucket[/path]` | 列桶、文件或目录；`-p` 按原始前缀匹配，`-r` 展开所有层级 |
 | `cat <acct>:/key` / `<acct>://bucket/key` | 把对象写到标准输出 |
-| `cp [-p] [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝；`-p` 按原始 S3 源前缀匹配 |
-| `rm [-r] <acct>:/key` / `<acct>://bucket/key` | 删除一个对象，或删除某个前缀下的全部对象 |
+| `cp [-p] [-r] [--skip-existing] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝；可跳过已有目标 |
+| `get [-p] [-r] [--skip-existing] <src> [dst]` | 下载到本地，省略目标时保存到当前目录；可跳过已有文件 |
+| `put [-r] [--skip-existing] <src> <dst>` | 上传本地文件或目录内容到 S3；可跳过已有对象 |
+| `rm [-p] [-r] [--dry-run] <S3-path>` | 删除文件或目录；`-p` 按原始前缀匹配，`--dry-run` 预览 |
 | `mb` / `rb <acct>://bucket` | 创建桶 / 删除空桶（必须写桶名） |
 | `web [-addr host:port]` | 启动网页界面 |
 | `version` | 打印版本号（由发布构建注入） |
+| `help [command]` / `<command> --help` | 显示用法、参数和示例 |
 
 ```bash
 scc ls minio:/abc.txt                  # 列出指定文件的大小、修改时间和名称
@@ -95,17 +98,22 @@ scc ls minio:/reports/ -n 0 |
   awk '$1 == "DIR" { n++ } END { print n + 0 }'  # 统计直接子目录数
 scc ls -r minio:/reports/ -n 0 |
   awk 'END { print NR + 0 }'                     # 统计全部对象数
-scc cp -r ./assets minio:/reports/      # 上传目录
-scc cp -r minio:/reports/2025 ./out     # 下载指定目录的内容
-scc cp -p -r minio:/reports/202 ./out   # 按前缀下载到 out/2025/... 等路径
-scc rm -r minio:/tmp/                   # 删除一个前缀
+scc put -r ./assets minio:/reports/     # 上传目录内容
+scc get minio:/abc.txt                # 下载到当前目录的 abc.txt
+scc get -r minio:/reports/2025 ./out   # 下载指定目录的内容
+scc get -p -r minio:/reports/202 ./out # 按前缀下载到 out/2025/... 等路径
+scc get -r --skip-existing minio:/reports ./out # 重复下载时跳过已有文件
+scc rm -r --dry-run minio:/tmp         # 预览将删除的对象
+scc help get                          # 查看命令帮助
 ```
 
 > [!NOTE]
-> `ls` 和以 S3 为源的 `cp` 默认优先选择完整 key 对应的文件，没有同名文件时补 `/` 操作指定目录；文件与目录同名时，用结尾 `/` 指定目录。`-p` 使用原始 S3 prefix，不补 `/`、不优先选择文件；`-r` 只控制是否展开所有目录层级。需要沿用旧版递归前缀匹配时，请使用 `-p -r`。
+> `ls`、`get`、`rm` 和以 S3 为源的 `cp` 默认优先选择完整 key 对应的文件，没有同名文件时补 `/` 操作指定目录；文件与目录同名时，用结尾 `/` 指定目录。`-p` 使用原始 S3 prefix，不补 `/`、不优先选择文件；`-r` 只控制是否展开所有目录层级。需要沿用旧版递归前缀匹配时，请使用 `-p -r`。
 
 > [!WARNING]
-> `rm -r` 使用原始 S3 prefix，删除一个目录时请保留结尾 `/`，以免匹配到同前缀的其他目录。`cat` 和普通 `rm` 要求完整 key。
+> `rm -p -r` 会操作所有同前缀对象，执行前可用 `--dry-run` 查看准确范围。`rm -r docs` 则只删除 `docs/`，不会匹配到 `docs-old/`。
+
+下载完成后才替换本地目标文件，传输失败保留原文件并清理临时文件。`get`、`cp` 在终端中显示进度、大小和速度，结束时在 stderr 汇报文件数、总大小及跳过数量；通过管道或重定向输出时关闭动态进度。
 
 完整示例、各命令的 prefix 语义、目录与完整 key 的区别、数量统计、`cp -r` 的复制语义与终端输出截断规则见 [命令行说明](docs/cli.md)。
 

@@ -6,6 +6,35 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-20
+
+### Added
+
+- `get [-p] [-r] [--skip-existing] <S3-source> [local-path]` downloads to the
+  current directory or an explicit local destination, using the same path and
+  prefix rules as `cp`.
+- `put [-r] [--skip-existing] <local-source> <S3-destination>` uploads local
+  files or directory contents using the same behavior as `cp`.
+- `rm -p` explicitly matches raw prefixes, and `rm --dry-run` previews the exact
+  selected objects, including folder placeholders, without deleting them.
+- `get`, `put` and `cp` support `--skip-existing`, terminal transfer progress
+  and final summaries of completed files, bytes and skipped destinations.
+- `scc help <command>` and `<command> --help` show options and examples without
+  requiring configuration or a connection.
+
+### Changed
+
+- `rm` uses the same exact-file and directory boundaries as `ls`, `get` and `cp`.
+  Use `rm -p -r` for the former recursive prefix matching.
+- Missing paths now fail explicitly; empty directories and unmatched prefixes
+  have distinct stderr messages without contaminating listing stdout.
+
+### Fixed
+
+- Downloads replace their destination only after successful reception and clean
+  up temporary files on failure, preserving existing data and file permissions.
+- Batch deletions report partial S3 failures and the successful deletion count.
+
 ## [0.7.0] - 2026-11-19
 
 ### Added

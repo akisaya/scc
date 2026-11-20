@@ -3,7 +3,9 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/akisaya/scc/internal/s3x"
@@ -57,4 +59,27 @@ func copyObject(ctx context.Context, c *s3x.Client, bucket, key string) (s3x.Obj
 // parentPrefix keeps the directory portion without cleaning or rewriting S3 keys.
 func parentPrefix(key string) string {
 	return key[:strings.LastIndexByte(key, '/')+1]
+}
+
+func listSource(ctx context.Context, c *s3x.Client, bucket, name string, selected source, recursive, prefixMode bool, limit int32) (*s3x.Listing, error) {
+	l, err := c.List(ctx, bucket, selected.prefix, recursive, limit)
+	if err != nil {
+		return nil, err
+	}
+	if !prefixMode && selected.prefix != "" && !l.HasMatches {
+		return nil, fmt.Errorf("path %q does not exist", name)
+	}
+	return l, nil
+}
+
+func noMatchingFiles(name string, l *s3x.Listing) {
+	if len(l.Prefixes) > 0 {
+		fmt.Fprintf(os.Stderr, "prefix %q matches only directories; use -r to include their files\n", name)
+	} else if l.FolderMarker != nil {
+		fmt.Fprintf(os.Stderr, "empty directory: %s\n", name)
+	} else if l.HasMatches {
+		fmt.Fprintf(os.Stderr, "prefix %q matches only folder placeholders; no files to transfer\n", name)
+	} else {
+		fmt.Fprintf(os.Stderr, "no objects match prefix %q\n", name)
+	}
 }

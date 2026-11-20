@@ -78,7 +78,7 @@ scc use minio:              # 清除默认桶
 
 S3 没有传统文件夹。列表中的 `DIR` 是 `scc` 根据 `Delimiter=/` 从对象 key 推导出的公共前缀。
 
-`ls` 和以 S3 为源的 `cp` 共用路径规则：默认优先选择精确文件，没有同名文件时补 `/` 选择目录；`-p` 使用原始 prefix；`-r` 控制是否展开所有目录层级。`rm -r` 使用原始 prefix，具体见各命令说明。
+`ls`、`get`、`rm` 和以 S3 为源的 `cp` 共用路径规则：默认优先选择精确文件，没有同名文件时补 `/` 选择目录；`-p` 使用原始 prefix；`-r` 控制是否展开所有目录层级。
 
 ## 命令总览
 
@@ -94,11 +94,22 @@ scc <command> [args]
 | `buckets <acct>` | 列出账号下的桶，不受默认桶影响 |
 | `ls [-p] [-r] <acct>:[/path]` / `<acct>://bucket[/path]` | 列文件或目录；`-p` 按原始 prefix 匹配，`-r` 展开所有层级 |
 | `cat <acct>:/key` / `<acct>://bucket/key` | 把一个对象写到标准输出 |
-| `cp [-p] [-r] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝；`-p` 按原始 S3 源 prefix 匹配 |
-| `rm [-r] <acct>:/key` / `<acct>://bucket/key` | 删除一个对象，或删除原始 prefix 下的全部对象 |
+| `cp [-p] [-r] [--skip-existing] <src> <dst>` | 本地与 S3 互拷，或 S3 之间拷贝；可跳过已有目标 |
+| `get [-p] [-r] [--skip-existing] <src> [dst]` | 下载到本地；省略目标时使用当前目录 |
+| `put [-r] [--skip-existing] <src> <dst>` | 上传本地文件或目录内容到 S3 |
+| `rm [-p] [-r] [--dry-run] <S3-path>` | 删除文件或目录；可按前缀匹配并预览 |
 | `mb` / `rb <acct>://bucket` | 创建桶 / 删除空桶 |
 | `web [-addr host:port]` | 启动网页界面 |
 | `version` | 打印版本号；发布构建会注入版本信息 |
+| `help [command]` / `<command> --help` | 显示命令用法、参数和示例 |
+
+```bash
+scc help get
+scc rm --help
+scc help accounts add
+```
+
+查看帮助不需要读取配置或连接 S3，成功时退出码为 `0`。参数后的 `--` 表示后面的内容按路径参数处理，不再识别选项。
 
 ## 命令说明
 
@@ -182,6 +193,8 @@ scc ls minio:/reports -n 20
 scc ls -n 20 minio:/reports
 ```
 
+普通路径不存在时明确报错并返回非零退出码。真正的空目录（包含仅有 `/` 占位对象的目录）正常返回，在 stderr 提示 `empty directory`；prefix 没有匹配对象时正常返回，在 stderr 提示 `no objects match prefix`。这些提示不写入 stdout，数量统计仍只计算对象行。
+
 ### 统计数量
 
 S3 没有传统目录，对象数量通常就是文件数量。递归统计指定目录下的全部对象：
@@ -262,25 +275,70 @@ S3 可以同时存在同名文件与目录，本地文件系统不能。prefix �
 
 跨账号复制不受支持，需要先下载再上传。
 
+### `get`：下载到本地
+
+```bash
+scc get minio:/reports/q4.pdf                   # 保存为当前目录的 q4.pdf
+scc get minio:/reports/q4.pdf ./downloads/      # 保存为 downloads/q4.pdf
+scc get minio:/reports/q4.pdf ./renamed.pdf     # 指定本地文件名
+scc get -r minio:/reports/2025 ./out            # 下载目录内容到 out/
+scc get -p minio:/reports/README ./out          # 下载直接匹配的文件
+scc get -p -r minio:/reports/202 ./out          # 下载所有层级的前缀匹配对象
+```
+
+`get` 复用 `cp` 的 S3 到本地下载逻辑，源必须是 S3 路径，目标必须是本地路径；省略目标时使用当前目录 `.`。文件、目录、`-p`、`-r`、目标命名及下载前路径冲突检查都与 `cp` 相同，选项可以写在路径前后。普通下载使用源文件名，给目录源需要加 `-r`；递归下载复制目录内容。
+
+### `put`：上传到 S3
+
+```bash
+scc put ./abc.txt minio:/docs/                 # 保存为 docs/abc.txt
+scc put ./abc.txt minio:/renamed.txt           # 指定目标 key
+scc put -r ./assets minio:/backup              # 上传目录内容到 backup/
+scc put -r --skip-existing ./assets minio:/backup/
+```
+
+`put` 复用 `cp` 的本地到 S3 上传逻辑，源必须是本地路径，目标必须是 S3 路径。目录源需要 `-r`，递归上传复制目录内容；单文件源带 `-r` 时仍只上传该文件。目标 key 为空或以 `/` 结尾时保留源文件名。支持 `--skip-existing`、进度、传输摘要，以及 `put --help` 和 `scc help put`。选项可以写在路径前后。
+
+### 传输进度与覆盖
+
+`get`、`put` 和 `cp` 在终端中显示当前文件、完成数量、已传输大小、百分比和速度。S3 内的服务端复制只显示文件数量和当前对象，不推测字节进度。动态进度写入 stderr，通过管道或重定向 stdout 时自动关闭。
+
+结束时在 stderr 汇报成功文件数、总大小和跳过数量，例如 `downloaded 12 file(s), 8.2M; skipped 3`；成功的源和目标映射仍写入 stdout。prefix 仅匹配到子目录而没有直接文件时，会提示使用 `-r`。
+
+本地下载先写入目标目录中的临时文件，完整接收、检查长度并关闭文件后再替换最终文件；失败时保留已有目标并清理临时文件。替换已有普通文件时保留它的权限，新文件默认仅当前用户可读写。
+
+默认允许覆盖已有目标。`--skip-existing` 在传输前检查目标，已有文件或对象会被跳过，并计入跳过数量。下载、上传和 S3 内复制均支持这个选项：
+
+```bash
+scc get -r --skip-existing minio:/reports ./out
+scc cp -r --skip-existing ./assets minio:/assets/
+scc cp -r --skip-existing minio:/reports minio:/backup/
+```
+
 ### `rm`：删除
 
-普通 `rm` 精确删除一个对象 key：
+普通 `rm` 优先选择精确文件；目录源需要 `-r`。带 `-r` 的精确文件仍然只删除该文件：
 
 ```bash
 scc rm minio:/reports/q3.pdf
 ```
 
-`rm -r` 把给定路径原样作为 S3 prefix，删除所有以这些字符开头的对象：
+`rm -r` 自动为目录补 `/`，只删除指定目录内的对象和占位对象。文件与目录同名时，用结尾 `/` 明确选择目录：
 
 ```bash
-# 会匹配 reports/、reports-old/、reports2/ 等全部同前缀对象
+# 只删除 reports/ 内的对象，不会匹配 reports-old/
 scc rm -r minio:/reports
 
-# 只删除 reports/ 目录下的对象
-scc rm -r minio:/reports/
+# 先查看实际选择的对象，不执行删除
+scc rm -r --dry-run minio:/reports
+
+# 只有显式 -p 才匹配 reports/、reports-old/、reports2/ 等全部同前缀对象
+scc rm -p -r --dry-run minio:/reports
 ```
 
-`rm -r` 不会自动补 `/`。删除目录时应保留结尾 `/`。为避免误删整个桶，`rm -r` 不接受空前缀。
+`rm -p` 只删除直接匹配的对象，`rm -p -r` 删除所有层级的匹配对象。`--dry-run` 与实际删除共用对象选择逻辑，会列出每个完整路径，并汇报对象数和总大小；预览不会发送删除请求。旧版原始前缀删除需要改用 `-p -r`。所有模式都拒绝空前缀删除整个桶。
+
+删除请求每批最多 1000 个对象。部分失败时返回非零退出码，报告已成功删除的数量及失败对象；普通路径不存在时明确报错，prefix 无匹配时正常返回并提示。
 
 ### `cat`：读取对象
 

@@ -59,9 +59,16 @@ func lsCmd(args []string) error {
 	if src.object != nil {
 		l = &s3x.Listing{Objects: []s3x.Object{*src.object}}
 	} else {
-		l, err = c.List(ctx(), t.bucket, src.prefix, *recursive, int32(max))
+		l, err = listSource(ctx(), c, t.bucket, fs.Arg(0), src, *recursive, *prefixMode, int32(max))
 		if err != nil {
 			return err
+		}
+	}
+	if len(l.Objects) == 0 && len(l.Prefixes) == 0 && !l.Truncated {
+		if *prefixMode {
+			noMatchingFiles(fs.Arg(0), l)
+		} else {
+			fmt.Fprintf(os.Stderr, "empty directory: %s\n", fs.Arg(0))
 		}
 	}
 	for _, p := range l.Prefixes {
@@ -130,34 +137,6 @@ func catCmd(args []string) error {
 	defer out.Body.Close()
 	_, err = io.Copy(os.Stdout, out.Body)
 	return err
-}
-
-func rmCmd(args []string) error {
-	fs := flag.NewFlagSet("rm", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-	recursive := fs.Bool("r", false, "delete everything under the prefix")
-	if err := fs.Parse(flagsFirst(args)); err != nil {
-		return err
-	}
-	if fs.NArg() != 1 {
-		return errors.New("usage: scc rm [-r] <account>://bucket/key")
-	}
-	c, t, err := withTarget(fs.Arg(0))
-	if err != nil {
-		return err
-	}
-	if t.bucket == "" || t.key == "" {
-		return errors.New("rm needs a key or a prefix")
-	}
-	if !*recursive {
-		return c.Delete(ctx(), t.bucket, t.key)
-	}
-	n, err := c.DeletePrefix(ctx(), t.bucket, t.key)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("deleted %d object(s)\n", n)
-	return nil
 }
 
 func mbCmd(args []string) error {

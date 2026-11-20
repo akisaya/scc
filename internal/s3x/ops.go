@@ -25,10 +25,12 @@ type Object struct {
 
 // Listing holds one directory level unless Recursive was requested.
 type Listing struct {
-	Prefixes  []string
-	Objects   []Object
-	Truncated bool   // more keys exist than were returned
-	Cursor    string // continuation token for the next page, empty on the last one
+	Prefixes     []string
+	Objects      []Object
+	Truncated    bool    // more keys exist than were returned
+	Cursor       string  // continuation token for the next page, empty on the last one
+	HasMatches   bool    `json:"-"` // includes the hidden folder placeholder
+	FolderMarker *Object `json:"-"`
 }
 
 func (c *Client) Buckets(ctx context.Context) ([]string, error) {
@@ -93,19 +95,19 @@ func (c *Client) ListPage(ctx context.Context, bucket, prefix string, recursive 
 }
 
 func (l *Listing) add(page *s3.ListObjectsV2Output, prefix string) {
+	l.HasMatches = l.HasMatches || len(page.Contents) > 0 || len(page.CommonPrefixes) > 0
 	for _, o := range page.Contents {
 		key := aws.ToString(o.Key)
+		object := Object{
+			Key: key, Size: aws.ToInt64(o.Size), LastModified: aws.ToTime(o.LastModified), ETag: aws.ToString(o.ETag),
+		}
 		// Skip the zero-byte "dir/" placeholder for the folder being listed, but
 		// never a real object that merely happens to equal the prefix.
 		if key == prefix && strings.HasSuffix(prefix, "/") {
+			l.FolderMarker = &object
 			continue
 		}
-		l.Objects = append(l.Objects, Object{
-			Key:          key,
-			Size:         aws.ToInt64(o.Size),
-			LastModified: aws.ToTime(o.LastModified),
-			ETag:         aws.ToString(o.ETag),
-		})
+		l.Objects = append(l.Objects, object)
 	}
 	for _, cp := range page.CommonPrefixes {
 		l.Prefixes = append(l.Prefixes, aws.ToString(cp.Prefix))
@@ -177,6 +179,30 @@ func (c *Client) Put(ctx context.Context, bucket, key string, body io.Reader, si
 func (c *Client) Delete(ctx context.Context, bucket, key string) error {
 	_, err := c.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(bucket), Key: aws.String(key)})
 	return err
+}
+
+// DeleteKeys deletes exactly the selected keys, reporting partial API failures.
+func (c *Client) DeleteKeys(ctx context.Context, bucket string, keys []string) (int, error) {
+	deleted := 0
+	for start := 0; start < len(keys); start += 1000 {
+		end := min(start+1000, len(keys))
+		batch := make([]types.ObjectIdentifier, 0, end-start)
+		for _, key := range keys[start:end] {
+			batch = append(batch, types.ObjectIdentifier{Key: aws.String(key)})
+		}
+		out, err := c.DeleteObjects(ctx, &s3.DeleteObjectsInput{
+			Bucket: aws.String(bucket), Delete: &types.Delete{Objects: batch, Quiet: aws.Bool(true)},
+		})
+		if err != nil {
+			return deleted, err
+		}
+		deleted += len(batch) - len(out.Errors)
+		if len(out.Errors) > 0 {
+			failure := out.Errors[0]
+			return deleted, fmt.Errorf("could not delete %q: %s (%d failed object(s))", aws.ToString(failure.Key), aws.ToString(failure.Code), len(out.Errors))
+		}
+	}
+	return deleted, nil
 }
 
 // DeletePrefix removes every object under prefix, batching as the API requires.

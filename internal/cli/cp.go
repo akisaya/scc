@@ -20,11 +20,12 @@ func cpCmd(args []string) error {
 	fs.SetOutput(io.Discard)
 	recursive := fs.Bool("r", false, "copy recursively")
 	prefixMode := fs.Bool("p", false, "treat the S3 source as a raw prefix")
+	skipExisting := fs.Bool("skip-existing", false, "keep existing destination files or objects")
 	if err := fs.Parse(flagsFirst(args)); err != nil {
 		return err
 	}
 	if fs.NArg() != 2 {
-		return errors.New("usage: scc cp [-p] [-r] <src> <dst>")
+		return errors.New("usage: scc cp [-p] [-r] [--skip-existing] <src> <dst>")
 	}
 	src, dst := fs.Arg(0), fs.Arg(1)
 	if *prefixMode && !isS3(src) {
@@ -32,17 +33,17 @@ func cpCmd(args []string) error {
 	}
 	switch {
 	case isS3(src) && isS3(dst):
-		return cpS3ToS3(src, dst, *recursive, *prefixMode)
+		return cpS3ToS3(src, dst, *recursive, *prefixMode, *skipExisting)
 	case isS3(src):
-		return cpS3ToLocal(src, dst, *recursive, *prefixMode)
+		return cpS3ToLocal(src, dst, *recursive, *prefixMode, *skipExisting)
 	case isS3(dst):
-		return cpLocalToS3(src, dst, *recursive)
+		return cpLocalToS3(src, dst, *recursive, *skipExisting)
 	default:
 		return errors.New("one side must be <account>://bucket/key")
 	}
 }
 
-func cpS3ToLocal(src, dst string, recursive, prefixMode bool) error {
+func cpS3ToLocal(src, dst string, recursive, prefixMode, skipExisting bool) error {
 	c, t, err := withTarget(src)
 	if err != nil {
 		return err
@@ -64,13 +65,18 @@ func cpS3ToLocal(src, dst string, recursive, prefixMode bool) error {
 		if fi, err := os.Stat(dst); (err == nil && fi.IsDir()) || strings.HasSuffix(dst, string(os.PathSeparator)) {
 			target = filepath.Join(dst, path.Base(t.key))
 		}
-		return download(ctx, c, t.bucket, t.key, target)
+		progress := newTransfer("downloaded", 1)
+		defer progress.finish()
+		return download(ctx, c, t.bucket, *selected.object, target, skipExisting, progress)
 	}
 	if !prefixMode && !recursive {
-		return fmt.Errorf("source %q is not a file; pass -r to copy directory contents", src)
+		if _, err := listSource(ctx, c, t.bucket, src, selected, false, false, 1); err != nil {
+			return err
+		}
+		return fmt.Errorf("source %q is not a file; pass -r to download directory contents", src)
 	}
 
-	l, err := c.List(ctx, t.bucket, selected.prefix, recursive, 0)
+	l, err := listSource(ctx, c, t.bucket, src, selected, recursive, prefixMode, 0)
 	if err != nil {
 		return err
 	}
@@ -82,11 +88,16 @@ func cpS3ToLocal(src, dst string, recursive, prefixMode bool) error {
 	if err != nil {
 		return err
 	}
+	progress := newTransfer("downloaded", len(targets))
+	defer progress.finish()
+	if len(targets) == 0 && prefixMode {
+		noMatchingFiles(src, l)
+	}
 	for _, o := range l.Objects {
 		if strings.HasSuffix(o.Key, "/") {
 			continue
 		}
-		if err := download(ctx, c, t.bucket, o.Key, targets[o.Key]); err != nil {
+		if err := download(ctx, c, t.bucket, o, targets[o.Key], skipExisting, progress); err != nil {
 			return err
 		}
 	}
@@ -129,31 +140,37 @@ func downloadTargets(objects []s3x.Object, base, dst string) (map[string]string,
 	return targets, nil
 }
 
-func download(ctx context.Context, c *s3x.Client, bucket, key, dst string) error {
-	out, err := c.Get(ctx, bucket, key)
+func download(ctx context.Context, c *s3x.Client, bucket string, object s3x.Object, dst string, skipExisting bool, progress *transfer) error {
+	if skipExisting {
+		exists, err := localFileExists(dst)
+		if err != nil {
+			return err
+		}
+		if exists {
+			progress.skip(dst)
+			return nil
+		}
+	}
+	progress.begin(object.Key, object.Size)
+	out, err := c.Get(ctx, bucket, object.Key)
 	if err != nil {
 		return err
 	}
 	defer out.Body.Close()
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
+	expected := out.ContentLength
+	if expected == nil || *expected < 0 {
+		// Chunked responses still have the length obtained from HEAD or listing.
+		expected = &object.Size
 	}
-	f, err := os.Create(dst)
+	n, err := saveDownload(dst, out.Body, expected, progress)
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(f, out.Body); err != nil {
-		f.Close()
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-	fmt.Printf("%s -> %s\n", key, dst)
+	progress.success(object.Key, dst, n)
 	return nil
 }
 
-func cpLocalToS3(src, dst string, recursive bool) error {
+func cpLocalToS3(src, dst string, recursive, skipExisting bool) error {
 	c, t, err := withTarget(dst)
 	if err != nil {
 		return err
@@ -172,12 +189,19 @@ func cpLocalToS3(src, dst string, recursive bool) error {
 		if key == "" || strings.HasSuffix(key, "/") {
 			key = joinKey(key, filepath.Base(src))
 		}
-		return upload(ctx, c, t.bucket, key, src, fi.Size())
+		progress := newTransfer("uploaded", 1)
+		defer progress.finish()
+		return upload(ctx, c, t.bucket, key, src, fi.Size(), skipExisting, progress)
 	}
 	if !recursive {
 		return fmt.Errorf("%s is a directory, pass -r", src)
 	}
-	return filepath.WalkDir(src, func(p string, d os.DirEntry, err error) error {
+	type job struct {
+		path, key string
+		size      int64
+	}
+	var jobs []job
+	err = filepath.WalkDir(src, func(p string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
@@ -190,25 +214,48 @@ func cpLocalToS3(src, dst string, recursive bool) error {
 		if err != nil {
 			return err
 		}
-		return upload(ctx, c, t.bucket, key, p, info.Size())
+		jobs = append(jobs, job{p, key, info.Size()})
+		return nil
 	})
+	if err != nil {
+		return err
+	}
+	progress := newTransfer("uploaded", len(jobs))
+	defer progress.finish()
+	for _, job := range jobs {
+		if err := upload(ctx, c, t.bucket, job.key, job.path, job.size, skipExisting, progress); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func upload(ctx context.Context, c *s3x.Client, bucket, key, src string, size int64) error {
+func upload(ctx context.Context, c *s3x.Client, bucket, key, src string, size int64, skipExisting bool, progress *transfer) error {
+	if skipExisting {
+		exists, err := remoteFileExists(ctx, c, bucket, key)
+		if err != nil {
+			return err
+		}
+		if exists {
+			progress.skip(key)
+			return nil
+		}
+	}
 	f, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+	progress.begin(key, size)
 	ct := mime.TypeByExtension(filepath.Ext(src))
-	if err := c.Put(ctx, bucket, key, f, size, ct); err != nil {
+	if err := c.Put(ctx, bucket, key, &progressSeeker{f, progress}, size, ct); err != nil {
 		return err
 	}
-	fmt.Printf("%s -> %s\n", src, key)
+	progress.success(src, key, size)
 	return nil
 }
 
-func cpS3ToS3(src, dst string, recursive, prefixMode bool) error {
+func cpS3ToS3(src, dst string, recursive, prefixMode, skipExisting bool) error {
 	sc, st, err := withTarget(src)
 	if err != nil {
 		return err
@@ -236,17 +283,18 @@ func cpS3ToS3(src, dst string, recursive, prefixMode bool) error {
 		if key == "" || strings.HasSuffix(key, "/") {
 			key = joinKey(key, path.Base(st.key))
 		}
-		if err := dc.Copy(ctx, dt.bucket, key, s3x.Ref{Account: st.acct, Bucket: st.bucket, Key: st.key}); err != nil {
-			return err
-		}
-		fmt.Printf("%s://%s/%s -> %s\n", st.acct, st.bucket, key, dt.acct)
-		return nil
+		progress := newTransfer("copied", 1)
+		defer progress.finish()
+		return copyRemote(ctx, dc, st, dt, *selected.object, key, skipExisting, progress)
 	}
 	if !prefixMode && !recursive {
+		if _, err := listSource(ctx, sc, st.bucket, src, selected, false, false, 1); err != nil {
+			return err
+		}
 		return fmt.Errorf("source %q is not a file; pass -r to copy directory contents", src)
 	}
 
-	l, err := sc.List(ctx, st.bucket, selected.prefix, recursive, 0)
+	l, err := listSource(ctx, sc, st.bucket, src, selected, recursive, prefixMode, 0)
 	if err != nil {
 		return err
 	}
@@ -254,17 +302,57 @@ func cpS3ToS3(src, dst string, recursive, prefixMode bool) error {
 	if prefixMode {
 		base = parentPrefix(base)
 	}
+	total := 0
+	for _, o := range l.Objects {
+		if !strings.HasSuffix(o.Key, "/") {
+			total++
+		}
+	}
+	progress := newTransfer("copied", total)
+	defer progress.finish()
+	if total == 0 && prefixMode {
+		noMatchingFiles(src, l)
+	}
 	for _, o := range l.Objects {
 		if strings.HasSuffix(o.Key, "/") {
 			continue
 		}
 		rel := strings.TrimPrefix(o.Key, base)
 		key := joinKey(dt.key, rel)
-		if err := dc.Copy(ctx, dt.bucket, key, s3x.Ref{Account: st.acct, Bucket: st.bucket, Key: o.Key}); err != nil {
+		if err := copyRemote(ctx, dc, st, dt, o, key, skipExisting, progress); err != nil {
 			return err
 		}
-		fmt.Printf("%s -> %s\n", o.Key, key)
 	}
+	return nil
+}
+
+func remoteFileExists(ctx context.Context, c *s3x.Client, bucket, key string) (bool, error) {
+	object, err := copyObject(ctx, c, bucket, key)
+	if s3x.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return object.Key == key, nil
+}
+
+func copyRemote(ctx context.Context, dc *s3x.Client, src, dst target, object s3x.Object, key string, skipExisting bool, progress *transfer) error {
+	if skipExisting {
+		exists, err := remoteFileExists(ctx, dc, dst.bucket, key)
+		if err != nil {
+			return err
+		}
+		if exists {
+			progress.skip(key)
+			return nil
+		}
+	}
+	progress.beginCopy(object.Key, object.Size)
+	if err := dc.Copy(ctx, dst.bucket, key, s3x.Ref{Account: src.acct, Bucket: src.bucket, Key: object.Key}); err != nil {
+		return err
+	}
+	progress.success(src.acct+"://"+src.bucket+"/"+object.Key, dst.acct+"://"+dst.bucket+"/"+key, object.Size)
 	return nil
 }
 

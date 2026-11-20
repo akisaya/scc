@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -20,11 +21,17 @@ import (
 type listRequest struct{ prefix, delimiter string }
 
 type s3Mock struct {
-	mu       sync.Mutex
-	objects  map[string]string
-	requests []listRequest
-	denyList bool
-	denyHead bool
+	mu              sync.Mutex
+	objects         map[string]string
+	requests        []listRequest
+	denyList        bool
+	denyHead        bool
+	gets            []string
+	writes          []string
+	deletes         [][]string
+	shortGet        string
+	shortChunkedGet string
+	deleteFailure   string
 }
 
 func newS3Mock(t *testing.T, keys []string, denied bool) *s3Mock {
@@ -42,6 +49,33 @@ func newS3Mock(t *testing.T, keys []string, denied bool) *s3Mock {
 			return
 		}
 		q := r.URL.Query()
+		if r.Method == http.MethodPost && r.URL.Path == "/b" && q.Has("delete") {
+			var request struct {
+				Objects []struct{ Key string } `xml:"Object"`
+			}
+			if err := xml.NewDecoder(r.Body).Decode(&request); err != nil {
+				t.Error(err)
+				w.WriteHeader(400)
+				return
+			}
+			var batch []string
+			response := struct {
+				XMLName xml.Name                     `xml:"DeleteResult"`
+				Errors  []struct{ Key, Code string } `xml:"Error"`
+			}{}
+			for _, object := range request.Objects {
+				batch = append(batch, object.Key)
+				if object.Key == m.deleteFailure {
+					response.Errors = append(response.Errors, struct{ Key, Code string }{object.Key, "AccessDenied"})
+				} else {
+					delete(m.objects, object.Key)
+				}
+			}
+			m.deletes = append(m.deletes, batch)
+			w.Header().Set("Content-Type", "application/xml")
+			xml.NewEncoder(w).Encode(response)
+			return
+		}
 		if r.Method == http.MethodGet && r.URL.Path == "/b" && q.Get("list-type") == "2" {
 			m.requests = append(m.requests, listRequest{q.Get("prefix"), q.Get("delimiter")})
 			// Model S3's ordered prefix listing, delimiter grouping and page cap.
@@ -107,6 +141,16 @@ func newS3Mock(t *testing.T, keys []string, denied bool) *s3Mock {
 				return
 			case http.MethodGet:
 				if body, ok := m.objects[key]; ok {
+					m.gets = append(m.gets, key)
+					if key == m.shortChunkedGet {
+						w.WriteHeader(http.StatusOK)
+						w.(http.Flusher).Flush()
+						fmt.Fprint(w, body[:3])
+						return
+					}
+					if key == m.shortGet {
+						w.Header().Set("Content-Length", strconv.Itoa(len(body)+10))
+					}
 					fmt.Fprint(w, body)
 					return
 				}
@@ -114,6 +158,18 @@ func newS3Mock(t *testing.T, keys []string, denied bool) *s3Mock {
 				fmt.Fprint(w, "<Error><Code>NoSuchKey</Code></Error>")
 				return
 			case http.MethodPut:
+				m.writes = append(m.writes, key)
+				if r.Header.Get("X-Amz-Copy-Source") == "" {
+					body, err := io.ReadAll(r.Body)
+					if err != nil {
+						t.Error(err)
+						w.WriteHeader(400)
+						return
+					}
+					m.objects[key] = string(body)
+					w.Header().Set("ETag", `"e"`)
+					return
+				}
 				src, err := url.PathUnescape(r.Header.Get("X-Amz-Copy-Source"))
 				if err == nil {
 					if body, ok := m.objects[strings.TrimPrefix(src, "b/")]; ok {

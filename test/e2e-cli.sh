@@ -50,7 +50,6 @@ check "single slash requires a default bucket" "1" \
 "$BIN" cp "$T/a.txt" "local:/$B/literal.txt" >/dev/null
 check "bucket name is just a folder" "1" "$("$BIN" ls "local:/" | grep -c "DIR.*$B/")"
 "$BIN" rm "local:/$B/literal.txt" >/dev/null
-"$BIN" rm -r "local:/$B/" >/dev/null
 
 B2=bucket2$RANDOM
 "$BIN" mb "local://$B2" >/dev/null || fail=$((fail+1))
@@ -82,6 +81,17 @@ echo two > "$T/tree/sub/2.txt"
 check "recursive upload" "2" "$("$BIN" ls -r "local:/tree" | grep -c '.txt')"
 check "subdir listed as DIR" "1" "$("$BIN" ls "local:/tree" | grep -c 'DIR.*sub/')"
 
+"$BIN" put "$T/a.txt" local:/put/renamed.txt >/dev/null || fail=$((fail+1))
+check "put uploads renamed file" "hello scc" "$("$BIN" cat local:/put/renamed.txt)"
+echo "new contents" > "$T/put-new.txt"
+"$BIN" put --skip-existing "$T/put-new.txt" local:/put/renamed.txt >/dev/null || fail=$((fail+1))
+check "put skip-existing preserves remote object" "hello scc" "$("$BIN" cat local:/put/renamed.txt)"
+"$BIN" put "$T/tree" local:/put/tree -r >/dev/null || fail=$((fail+1))
+check "put uploads directory contents" "two" "$("$BIN" cat local:/put/tree/sub/2.txt)"
+check "put directory omits source directory name" "one" "$("$BIN" cat local:/put/tree/1.txt)"
+check "put help" "1" "$("$BIN" put --help | grep -c 'usage: scc put')"
+"$BIN" rm -r local:/put >/dev/null || fail=$((fail+1))
+
 mkdir -p "$T/out"
 "$BIN" cp -r "local:/tree" "$T/out" >/dev/null || fail=$((fail+1))
 check "recursive download" "two" "$(cat "$T/out/sub/2.txt" 2>/dev/null)"
@@ -95,6 +105,23 @@ check "ls -r respects directory boundaries" "2" "$("$BIN" ls -r local:/semantics
 check "ls -p retains the full filename" "1" "$("$BIN" ls -p local:/semantics/abc | grep -c 'abc.txt.bak$')"
 check "ls -p groups matching directories" "2" "$("$BIN" ls -p local:/semantics/doc | grep -c '^DIR')"
 check "ls -p -r expands all matches" "3" "$("$BIN" ls -p -r local:/semantics/doc | wc -l | tr -d ' ')"
+
+"$BIN" get local:/semantics/abc.txt "$T/get-renamed.txt" >/dev/null || fail=$((fail+1))
+check "get downloads a renamed file" "hello scc" "$(cat "$T/get-renamed.txt" 2>/dev/null)"
+(cd "$T" && "$BIN" get local:/semantics/abc.txt >/dev/null) || fail=$((fail+1))
+check "get defaults to the current directory" "hello scc" "$(cat "$T/abc.txt" 2>/dev/null)"
+echo "keep existing" > "$T/abc.txt"
+(cd "$T" && "$BIN" get --skip-existing local:/semantics/abc.txt >/dev/null) || fail=$((fail+1))
+check "get skip-existing preserves local data" "keep existing" "$(cat "$T/abc.txt")"
+"$BIN" get local:/semantics/docs "$T/get-dir" -r >/dev/null || fail=$((fail+1))
+check "get downloads nested directory contents" "hello scc" "$(cat "$T/get-dir/sub/b.txt" 2>/dev/null)"
+check "get directory excludes sibling prefixes" "2" "$(find "$T/get-dir" -type f | wc -l | tr -d ' ')"
+"$BIN" get -p local:/semantics/abc "$T/get-files" >/dev/null || fail=$((fail+1))
+check "get -p downloads only direct files" "2" "$(find "$T/get-files" -type f | wc -l | tr -d ' ')"
+"$BIN" get -p -r local:/semantics/doc "$T/get-prefix" >/dev/null || fail=$((fail+1))
+check "get prefix retains directory names" "hello scc" "$(cat "$T/get-prefix/docs-old/c.txt" 2>/dev/null)"
+check "get rejects an S3 destination" "1" \
+  "$("$BIN" get local:/semantics/abc.txt local:/semantics/not-local.txt 2>&1 | grep -c 'destination must be a local path')"
 
 "$BIN" cp -r local:/semantics/abc.txt "$T/single-with-r.txt" >/dev/null || fail=$((fail+1))
 check "cp -r selects an exact file" "hello scc" "$(cat "$T/single-with-r.txt" 2>/dev/null)"
@@ -115,6 +142,14 @@ mkdir -p "$T/conflict"
 check "prefix download reports local conflicts" "1" \
   "$("$BIN" cp -p -r local:/semantics/abc "$T/conflict" 2>&1 | grep -c 'file/directory conflict')"
 check "conflict checked before downloading" "0" "$(find "$T/conflict" -type f | wc -l | tr -d ' ')"
+check "get help" "1" "$("$BIN" get --help | grep -c 'usage: scc get')"
+check "nested account help" "1" "$("$BIN" help accounts add | grep -c 'usage: scc accounts add')"
+check "rm preview exact directory" "2" "$("$BIN" rm -r --dry-run local:/semantics/docs | grep -c '^would delete')"
+check "rm preview leaves data intact" "hello scc" "$("$BIN" cat local:/semantics/docs/a.txt)"
+"$BIN" rm -r local:/semantics/docs >/dev/null || fail=$((fail+1))
+check "rm directory excludes sibling prefixes" "hello scc" "$("$BIN" cat local:/semantics/docs-old/c.txt)"
+check "rm raw prefix preview" "1" "$("$BIN" rm -p -r --dry-run local:/semantics/doc | grep -c '^would delete')"
+check "missing path returns clear error" "1" "$("$BIN" ls local:/semantics/missing 2>&1 | grep -c 'does not exist')"
 "$BIN" rm -r local:/semantics/ >/dev/null || fail=$((fail+1))
 
 "$BIN" cp "local:/docs/b.md" "$T/dl.md" >/dev/null || fail=$((fail+1))

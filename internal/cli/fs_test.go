@@ -18,6 +18,8 @@ func TestLSFilesAndDirectories(t *testing.T) {
 		warning bool
 		denied  bool
 		query   *listRequest
+		wantErr string
+		message string
 	}{
 		{name: "root file", args: []string{"local:/abc.txt"}, want: "abc.txt"},
 		{name: "nested file", args: []string{"local:/docs/abc.txt"}, want: "abc.txt"},
@@ -28,8 +30,8 @@ func TestLSFilesAndDirectories(t *testing.T) {
 		{name: "directory with slash", args: []string{"local:/docs/"}, want: "DIR sub/\nabc.txt\nabc.txt.bak"},
 		{name: "same named directory", args: []string{"local:/abc.txt/"}, want: "child.txt"},
 		{name: "directory boundary", args: []string{"local:/reports/cache"}, want: "a.txt"},
-		{name: "partial directory name", args: []string{"local:/reports/cac"}},
-		{name: "missing file", args: []string{"local:/missing.txt"}},
+		{name: "partial directory name", args: []string{"local:/reports/cac"}, wantErr: "does not exist"},
+		{name: "missing file", args: []string{"local:/missing.txt"}, wantErr: "does not exist"},
 		{name: "recursive exact file", args: []string{"local:/abc.txt", "-r"}, want: "abc.txt"},
 		{name: "recursive nested file", args: []string{"local:/docs/abc.txt", "-r"}, want: "docs/abc.txt"},
 		{name: "recursive directory without slash", args: []string{"local:/reports/cache", "-r"}, want: "reports/cache/a.txt", query: &listRequest{"reports/cache/", ""}},
@@ -40,7 +42,7 @@ func TestLSFilesAndDirectories(t *testing.T) {
 		{name: "prefix directory with slash", args: []string{"local:/docs/", "-p"}, want: "DIR sub/\nabc.txt\nabc.txt.bak"},
 		{name: "recursive prefix", args: []string{"local:/abc.txt", "-p", "-r"}, want: "abc.txt\nabc.txt.bak\nabc.txt/child.txt", query: &listRequest{"abc.txt", ""}},
 		{name: "recursive partial prefix", args: []string{"local:/reports/cac", "-p", "-r"}, want: "reports/cache-old/b.txt\nreports/cache/a.txt"},
-		{name: "prefix missing", args: []string{"local:/missing", "-p"}},
+		{name: "prefix missing", args: []string{"local:/missing", "-p"}, message: "no objects match prefix"},
 		{name: "bucket root", args: []string{"local:"}, want: "DIR abc.txt/\nDIR docs/\nDIR reports/\nREADME\nabc.txt\nabc.txt.bak"},
 		{name: "capped directory", args: []string{"local:/docs", "-n", "2"}, want: "abc.txt", warning: true},
 		{name: "capped prefix", args: []string{"local:/abc.txt", "-p", "-n", "2"}, want: "abc.txt\nabc.txt.bak", warning: true},
@@ -53,6 +55,10 @@ func TestLSFilesAndDirectories(t *testing.T) {
 			if tc.denied {
 				if err == nil || !strings.Contains(err.Error(), "AccessDenied") {
 					t.Fatalf("got error %v, want AccessDenied", err)
+				}
+			} else if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("error = %v, want %q", err, tc.wantErr)
 				}
 			} else if err != nil {
 				t.Fatal(err)
@@ -80,6 +86,10 @@ func TestLSFilesAndDirectories(t *testing.T) {
 			if tc.warning {
 				if !strings.Contains(string(errOut), "只显示了前 2 项") {
 					t.Errorf("missing truncation warning: %q", errOut)
+				}
+			} else if tc.message != "" {
+				if !strings.Contains(errOut, tc.message) {
+					t.Errorf("stderr = %q, want %q", errOut, tc.message)
 				}
 			} else if len(errOut) != 0 {
 				t.Errorf("unexpected stderr: %q", errOut)
