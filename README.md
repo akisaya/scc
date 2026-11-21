@@ -21,7 +21,7 @@
 
 ## 安装
 
-**未安装 Go：** 从 [Releases](https://github.com/akisaya/scc/releases) 下载对应平台的预编译包（macOS / Linux / Windows，含 arm64），解压后将 `scc` 放入 `PATH`。
+**未安装 Go：** 从 [Releases](https://github.com/akisaya/scc/releases) 下载对应平台的预编译包（macOS arm64 / Linux amd64 / Windows amd64），解压后将 `scc` 放入 `PATH`。
 
 **已安装 [Go 1.24+](https://go.dev/dl/)：**
 
